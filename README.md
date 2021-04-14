@@ -1,9 +1,9 @@
-# MessengerDecryptedModule
+# MessengerDecryptionModule
 ---------------
 This project decrypted and modularized the database of several *messenger apps*.     
 
 
-### Apps what analysis   
+### Apps to analysis   
 ---------------
 ```
 - Lysn
