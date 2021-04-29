@@ -2,20 +2,22 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from lysn import lysn_userDB, lysn_talkDB
+import pandas as pd
+import openpyxl
 
 class DB(QWidget):
     def __init__(self):
         super().__init__()
         self.table = QTableWidget()
         self.initUI()
-
+       
     def initUI(self):
         appname = QLabel('choose app')
         kakaoButton = QPushButton("KakaoTalk")
         wechatButton = QPushButton("WeChat")
         lysnButton = QPushButton("Lysn")
         tongButton = QPushButton("TongTong")
-
+    
         lysnButton.clicked.connect(self.lysnButtonClicked)
 
         hButtonbox1 = QHBoxLayout()
@@ -51,19 +53,36 @@ class DB(QWidget):
             colname, rowlist = lysn_userDB(filename[0])
         elif filename[0][-7:] == 'talk.db':
             colname, rowlist = lysn_talkDB(filename[0])
-
+        
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.setColumnCount(len(colname))
         self.table.setRowCount(len(rowlist))
-
+        
+        
+        
         self.table.setHorizontalHeaderLabels(colname)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
                 self.table.setItem(i, j, QTableWidgetItem(str(rowlist[i][j])))
+            
+        #create Excel    
+        wb = openpyxl.Workbook()
+        sheet = wb.active
+        sheet.title = "Lysn"
+        col_excel = list(colname)[0:5]
+        
+        for x in range(1, len(col_excel) + 1):
+            sheet.cell(row = 1, column = x).value = col_excel[x - 1]
+        
+        for x in range(0, len(rowlist)):
+            for y in range(1, len(rowlist[i]) + 1):
+                sheet.cell(row = x + 2, column = y).value = str(rowlist[x][y - 1])
+            
+        wb.save("Lysn_excel.xlsx")
 
-
+        
 app = QApplication(sys.argv)
 db = DB()
 db.show()
