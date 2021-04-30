@@ -51,8 +51,11 @@ class DB(QWidget):
 
         if filename[0][-7:] == 'user.db':
             colname, rowlist = lysn_userDB(filename[0])
+            f_name = "user_db"
         elif filename[0][-7:] == 'talk.db':
             colname, rowlist = lysn_talkDB(filename[0])
+            f_name = "talk_db"
+            
         
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -75,12 +78,22 @@ class DB(QWidget):
         
         for x in range(1, len(col_excel) + 1):
             sheet.cell(row = 1, column = x).value = col_excel[x - 1]
-        
+            
         for x in range(0, len(rowlist)):
             for y in range(1, len(rowlist[i]) + 1):
                 sheet.cell(row = x + 2, column = y).value = str(rowlist[x][y - 1])
+                
+                
+        #resize the cell
+        for x in range(0, len(colname)):
+            MAX = 1
+            for y in range(1, len(rowlist) + 1):
+                cell_size = len(str(rowlist[y - 1][x]))
+                if MAX < cell_size:
+                    MAX = cell_size
+                    sheet.column_dimensions[chr(65 + x)].width = MAX + 2
             
-        wb.save("Lysn_excel.xlsx")
+        wb.save("Lysn_" + f_name + ".xlsx")
 
         
 app = QApplication(sys.argv)
