@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from lysn import lysn_userDB, lysn_talkDB
-import pandas as pd
+from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
 
 class DB(QWidget):
@@ -91,8 +91,21 @@ class DB(QWidget):
                 cell_size = len(str(rowlist[y - 1][x]))
                 if MAX < cell_size:
                     MAX = cell_size
-                    sheet.column_dimensions[chr(65 + x)].width = MAX + 2
-            
+                    sheet.column_dimensions[chr(65 + x)].width = MAX + 1
+        
+        #change the font 
+        for x in range(1, len(colname) + 1):
+            cell = sheet[chr(64 + x) + "1"]
+            cell.font = Font(size=11, bold=True)
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = Border(right=Side(border_style="thick"), bottom=Side(border_style="thick"))
+
+        for x in range(len(rowlist) + 1):
+            for y in range(len(rowlist[i]) - 1):
+                cell = sheet[chr(65 + y) + str(x + 2)]
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.border = Border(right=Side(border_style="thick"))
+ 
         wb.save("Lysn_" + f_name + ".xlsx")
 
         
