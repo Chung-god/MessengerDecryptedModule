@@ -16,28 +16,35 @@ class DB(QWidget):
         self.colname = []
         self.rowlist = []
 
+        # 앱 버튼 생성
         kakaoButton = QPushButton("KakaoTalk")
         wechatButton = QPushButton("WeChat")
         lysnButton = QPushButton("Lysn")
         tongButton = QPushButton("TongTong")
-    
+
+        # 버튼 클릭 시 실행되는 함수 지정
         lysnButton.clicked.connect(self.lysnButtonClicked)
 
+        # android id 라벨, 텍스트 초기화
+        # 처음에 숨겨놨다가 Lysn 버튼 누르면 보여주기
         self.androidIdLabel = QLabel('Android Id : ')
         self.androidIdLabel.setFixedWidth(100)
-        self.androidIdLabel.hide()
+        self.androidIdLabel.hide() # 숨기기
         self.lysnAndroidId = QLineEdit()
         self.lysnAndroidId.setFixedWidth(300)
         self.lysnAndroidId.hide()
 
+        # user.db와 talk.db 버튼 생성
         self.lysnButton_user = QPushButton("User.db")
         self.lysnButton_user.hide()
         self.lysnButton_talk = QPushButton("Talk.db")
         self.lysnButton_talk.hide()
 
+        # 엑셀 추출 버튼 생성
         self.excelButton = QPushButton("Excel Export")
         self.excelButton.clicked.connect(self.excelButtonClicked)
 
+        # 수평 레이아웃 생성
         hbox1 = QHBoxLayout()
         hbox2 = QHBoxLayout()
         hbox3 = QHBoxLayout()
@@ -57,6 +64,7 @@ class DB(QWidget):
         hbox5.addWidget(tongButton)
         hbox6.addWidget(self.excelButton)
 
+        # 수직 레이아웃 생성
         layout = QVBoxLayout()
         layout.addLayout(hbox1)
         layout.addLayout(hbox2)
@@ -66,9 +74,9 @@ class DB(QWidget):
         layout.addWidget(self.table)
         layout.addLayout(hbox6)
 
-        self.setLayout(layout)
-        self.setGeometry(1000,1000,1000,1000)
-        self.setWindowTitle('messenger app artifact')
+        self.setLayout(layout) # 레이아웃 설정
+        self.setGeometry(1000,1000,1000,1000) # window 화면 크기
+        self.setWindowTitle('messenger app artifact') # window 이름 지정
         self.center()
         self.show()
 
@@ -78,7 +86,9 @@ class DB(QWidget):
         frame_info.moveCenter(display_center)
         self.move(frame_info.topLeft())
 
+    # Lysn 버튼 클릭 시
     def lysnButtonClicked(self):
+        # user.db 버튼이 보여져 있다면 숨기도록, 숨겨져 있다면 보이도록 바꾼다.
         if self.lysnButton_user.isVisible() == True:
             self.lysnButton_user.hide()
             self.lysnButton_talk.hide()
@@ -90,19 +100,25 @@ class DB(QWidget):
             self.androidIdLabel.show()
             self.lysnAndroidId.show()
 
-            self.lysnButton_user.clicked.connect(self.DBClicked)
+            # DBCliced 함수와 연결
+            self.lysnButton_user.clicked.connect(self.DBClicked) 
             self.lysnButton_talk.clicked.connect(self.DBClicked)
 
+    # DB 버튼 클릭 시
     def DBClicked(self):
         
-        #android_id = '4f77d977f3f1c488'
+        # android_id 입력 안하면 함수 실행 안하도록
+        # android_id = '4f77d977f3f1c488'
         android_id = self.lysnAndroidId.text()
         if android_id == '':
             return
         
+        # db file 선택해서 경로 받아오기
         global filename
         filename = QFileDialog.getOpenFileName(self, 'Open File')
 
+        # db file 경로에 따라 db안에 있는 아티팩트 가져오기
+        # colname에 열 제목 담기, rowlist에 각 행마다 리스트로 담기
         if filename[0][-7:] == 'user.db':
             self.colname, self.rowlist = lysn_userDB(filename[0], android_id)
             self.f_name = "user_db"
@@ -112,17 +128,18 @@ class DB(QWidget):
             self.f_name = "talk_db"
         
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table.setColumnCount(len(self.colname))
-        self.table.setRowCount(len(self.rowlist))
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers) # 표 수정 못하도록
+        self.table.setColumnCount(len(self.colname)) # col 개수 지정
+        self.table.setRowCount(len(self.rowlist)) # row 개수 지정
         
-        self.table.setHorizontalHeaderLabels(self.colname)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.setHorizontalHeaderLabels(self.colname) # 열 제목 지정
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
+        # rowlist를 표에 지정하기
         for i in range(len(self.rowlist)):
             for j in range(len(self.rowlist[i])):
-                self.table.setItem(i, j, QTableWidgetItem(str(self.rowlist[i][j])))
+                self.table.setItem(i, j, QTableWidgetItem(str(self.rowlist[i][j]))) 
             
-
+    # 엑셀 추출 버튼 클릭 시
     def excelButtonClicked(self):
         if self.f_name == '':
             return
