@@ -8,11 +8,6 @@ from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
 import random
 
-try:
-    from html import escape
-except ImportError:
-    from cgi import escape
-
 
 class DB(QWidget):
     def __init__(self):
