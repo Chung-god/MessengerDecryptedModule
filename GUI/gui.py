@@ -6,21 +6,20 @@ from PyQt5.QtGui import *
 from lysn import lysn_userDB, lysn_talkDB
 from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
-import random
-
 
 class DB(QWidget):
     def __init__(self):
         super().__init__()
         self.table = QTableWidget()
         self.initUI()
-       
+        
+        
     def initUI(self):
         self.f_name = ''
         self.colname = []
         self.rowlist = []
         
-        
+    
         # 앱 버튼 생성
         kakaoButton = QPushButton("KakaoTalk")
         wechatButton = QPushButton("WeChat")
@@ -31,9 +30,8 @@ class DB(QWidget):
         
         # Ctrl+ F 
         shortcut = QShortcut(QKeySequence('Ctrl+f'), self)
-        #shortcut.activated.connect(self.handleFind)
-    
-    
+        shortcut.activated.connect(self.handleFind)
+     
         # 버튼 클릭 시 실행되는 함수 지정
         lysnButton.clicked.connect(self.lysnButtonClicked)
 
@@ -88,7 +86,9 @@ class DB(QWidget):
         layout.addLayout(hbox5)
         layout.addWidget(self.table)
         layout.addLayout(hbox6)
-         
+        
+        
+        self.on_off = 0
         self.searchButton.clicked.connect(self.search_items) # search
         self.setLayout(layout) # 레이아웃 설정
         self.setGeometry(1000,1000,1000,1000) # window 화면 크기
@@ -97,26 +97,62 @@ class DB(QWidget):
         self.show()
     
     
-    # search
+    # search box
     def search_items(self):
-        text = self.searchBox.text()
         
+        #rest font
+        def reset(self, items):
+            for item in items:
+                item.setBackground(QBrush(Qt.white))
+                item.setForeground(QBrush(Qt.black))
+                item.setFont(QFont())
+            
+        
+        if self.on_off == 0:
+                text = self.searchBox.text()
+                selected_items = self.table.findItems(self.searchBox.text(), QtCore.Qt.MatchContains)
+        else:
+                text = self.findField.text()
+                selected_items = self.table.findItems(self.findField.text(), QtCore.Qt.MatchContains)
+            
+            
         allitems = self.table.findItems("", QtCore.Qt.MatchContains)
-        selected_items = self.table.findItems(self.searchBox.text(), QtCore.Qt.MatchContains)
         
         # reset
-        for item in allitems:
-            item.setBackground(QBrush(Qt.white))
-            item.setForeground(QBrush(Qt.black))
-            
+        reset(self, allitems)
+             
         # highlight the search results
         for item in allitems:
-           if item in selected_items:
-               item.setBackground(QBrush(Qt.black))
-               item.setForeground(QBrush(Qt.white))
-               item.setFont(QFont("Helvetica", 11, QFont.Bold))
+            if item in selected_items:   
+                item.setBackground(QBrush(Qt.black))
+                item.setForeground(QBrush(Qt.white))
+                item.setFont(QFont("Helvetica", 11, QFont.Bold))
                
-                        
+        if self.searchBox.text() == "":
+            reset(self, allitems)
+            print("sb None")
+        elif self.on_off == 1 and self.findField.text() =="":
+            reset(self, allitems)
+            print("ff None")
+        
+   
+    # ctrl + f
+    def handleFind(self):
+        self.on_off = 1
+        findDialog = QDialog()
+        grid = QGridLayout()
+        findDialog.setLayout(grid)
+        findLabel = QLabel("Search...", findDialog)
+        grid.addWidget(findLabel,1,0)
+        self.findField = QLineEdit(findDialog)
+        grid.addWidget(self.findField,1,1)
+        findButton = QPushButton("Find", findDialog)
+        findButton.clicked.connect(self.search_items)
+        grid.addWidget(findButton,2,1)
+        findDialog.setWindowTitle("Search items")
+        findDialog.exec_()
+        self.on_off = 0
+        
 
     def center(self):
         frame_info = self.frameGeometry()
