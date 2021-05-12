@@ -1,163 +1,113 @@
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import *
+
 from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
+from xml.etree.ElementTree import parse
+
 from exportDB import lysn_userDB, lysn_talkDB
+from button import Button
 
-class LysnScreen(QWidget):
-    def __init__(self, MainWindow):
+class LysnScreen(QDialog):
+    def __init__(self, phoneNo):
         super().__init__()
-        self.setupUI(MainWindow)
-
-    def setupUI(self, MainWindow):
         # 초기화
-        self.on_off, self.f_name, self.colname, self.rowlist, self.TalkDB = 0, '', [], [], []
+        self.tableWidget = QTableWidget()
+        self.on_off, self.f_name = 0, ''
+        self.userColnames, self.userRowlists, self.talkColnames, self.talkRowlists = [], [], [], []
+
+        self.phoneNo = phoneNo
+        self.path = f'AppData/{self.phoneNo}/Lysn/'
+        self.lysnData() # 미리 Lysn 데이터 모두 가져오기
+        self.setupUI()
+
+    def setupUI(self):
+        
+        # Window Backgrond
+        palette = QPalette()
+        palette.setColor( QPalette.Background , QColor(242, 242, 242))
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+        
+        # Window Setting
+        self.setGeometry(500, 70, 800, 600)
+        self.setWindowTitle("main")
+        self.setFixedSize(self.rect().size())
+        self.setContentsMargins(10,10,10,10)
 
         # Ctrl+ F 
         self.shortcut = QShortcut(QKeySequence('Ctrl+f'), self)
         self.shortcut.activated.connect(self.handleFind)
 
-        MainWindow.setObjectName("LysnWindow")
-        MainWindow.resize(691, 551)
+        # back/search button
+        self.backButton = Button(QPixmap("image/back.png"), 35, self.showAppWindow)
+        self.searchButton = Button(QPixmap("image/search.png"), 35, self.search_items)
+        self.backButton.setStyleSheet('background:transparent')
+        self.searchButton.setStyleSheet('background:transparent')
 
-        self.centralwidget = QtWidgets.QWidget(MainWindow)
-        self.centralwidget.setObjectName("centralwidget")
-        self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
-        self.gridLayout.setObjectName("gridLayout")
-        self.verticalLayout = QtWidgets.QVBoxLayout()
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-
-        # back button
-        self.backButton = QtWidgets.QPushButton(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.backButton.sizePolicy().hasHeightForWidth())
-        self.backButton.setSizePolicy(sizePolicy)
-        self.backButton.setMinimumSize(QtCore.QSize(75, 0))
-        self.backButton.setMaximumSize(QtCore.QSize(16777215, 30))
-        self.backButton.setStyleSheet("background-image:url(\"image/back.png\");")
-        self.backButton.setText("")
-        self.backButton.setObjectName("backButton")
-        self.horizontalLayout.addWidget(self.backButton)
-
-        self.backButton.clicked.connect(self.search_items) # search
-        
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+        # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
+        self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
+        self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
 
         # search text
-        self.searchBox = QtWidgets.QLineEdit(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.searchBox.sizePolicy().hasHeightForWidth())
-        self.searchBox.setSizePolicy(sizePolicy)
+        self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
-        self.searchBox.setObjectName("searchBox")
-        self.horizontalLayout.addWidget(self.searchBox)
-
-        # search button
-        self.searchButton = QtWidgets.QPushButton(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.searchButton.sizePolicy().hasHeightForWidth())
-        self.searchButton.setSizePolicy(sizePolicy)
-        self.searchButton.setMinimumSize(QtCore.QSize(0, 30))
-        self.searchButton.setMaximumSize(QtCore.QSize(40, 16777215))
-        self.searchButton.setStyleSheet("background-image:url(\"image/search.png\");")
-        self.searchButton.setText("")
-        self.searchButton.setObjectName("searchButton")
-        self.horizontalLayout.addWidget(self.searchButton)
-
-        self.searchButton.clicked.connect(self.search_items) # search
-
-        # open button
-        self.openButton = QtWidgets.QPushButton(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.openButton.sizePolicy().hasHeightForWidth())
-        self.openButton.setSizePolicy(sizePolicy)
-        self.openButton.setMaximumSize(QtCore.QSize(16777215, 30))
-        self.openButton.setObjectName("openButton")
-        self.horizontalLayout.addWidget(self.openButton)
-        self.verticalLayout.addLayout(self.horizontalLayout)
-        
-        self.openButton.clicked.connect(self.DBClicked)
-
-        # layout 4
-        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        
-        # combo box
-        self.dbComboBox = QtWidgets.QComboBox(self.centralwidget)
-        self.dbComboBox.setObjectName("dbComboBox")
-        self.dbComboBox.addItem("")
-        self.dbComboBox.addItem("")
-        self.horizontalLayout_4.addWidget(self.dbComboBox)
-        self.dbComboBox.setFixedWidth(100)
-
-        self.dbComboBox.activated.connect(self.comboEvent)
-        self.dbComboBox.hide()
-
-        # combo box User
-        self.dbComboBoxUser = QtWidgets.QComboBox(self.centralwidget)
-        self.dbComboBoxUser.setObjectName("dbComboBoxUser")
-        self.dbComboBoxUser.addItem("")
-        self.horizontalLayout_4.addWidget(self.dbComboBoxUser)
-        self.dbComboBoxUser.setFixedWidth(100)
-        self.dbComboBoxUser.hide()
+    
+        # combo box talk
+        self.talkComboBox = QComboBox()
+        self.talkComboBox.addItem("chats")
+        self.talkComboBox.addItem("rooms")
+        self.talkComboBox.addItem("lastindex")
+        self.talkComboBox.addItem("sqlite_sequence")
+        self.talkComboBox.setFixedWidth(100)
+        self.talkComboBox.activated.connect(self.talkComboEvent)
+        self.talkComboBox.hide()
 
         # excel button
-        self.excelSaveButton = QtWidgets.QPushButton(self.centralwidget)
-        self.excelSaveButton.setObjectName("excelSaveButton")
-        self.dbComboBoxUser.setFixedWidth(100)
-        self.horizontalLayout_4.addStretch(1)
-        self.horizontalLayout_4.addWidget(self.excelSaveButton)
+        self.excelSaveButton = QPushButton()
+        self.excelSaveButton.setFixedWidth(100)
+        self.excelSaveButton.setText('xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
-
-        self.verticalLayout.addLayout(self.horizontalLayout_4)
-        self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
-
-
-        # table
-        self.tableWidget = QtWidgets.QTableWidget(self.centralwidget)
-        self.tableWidget.setMinimumSize(QtCore.QSize(0, 20))
-        self.tableWidget.setRowCount(0)
-        self.tableWidget.setColumnCount(0)
-        self.tableWidget.setObjectName("tableWidget")
-        self.gridLayout.addWidget(self.tableWidget, 1, 0, 1, 1)
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
         
+        # open combo box
+        self.openComboBox = QComboBox()
+        self.openComboBox.addItem("user.db")
+        self.openComboBox.addItem("talk.db")
+        self.openComboBox.setFixedWidth(100)
+        self.openComboBox.activated.connect(self.DBClicked)
+
+        # combo box user
+        self.userComboBox = QComboBox()
+        self.userComboBox.addItem("users")
+        self.userComboBox.addItem("sqlite_sequence")
+        self.userComboBox.setFixedWidth(100)
+        self.userComboBox.activated.connect(self.userComboEvent)
+
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(self.backButton)
+        hbox1.addStretch(1)
+        hbox1.addWidget(self.searchBox)
+        hbox1.addWidget(self.searchButton)
+        hbox1.addWidget(self.openComboBox)
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(self.userComboBox)
+        hbox2.addWidget(self.talkComboBox)
+        hbox2.addStretch(1)
+        hbox2.addWidget(self.excelSaveButton)
         
-        self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
-        
+        layout = QVBoxLayout()
+        layout.addLayout(hbox1)
+        layout.addLayout(hbox2)
+        layout.addWidget(self.tableWidget)
+
+        self.setLayout(layout)
         self.center()
+        self.show()
 
-    def retranslateUi(self, MainWindow):
-        _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.openButton.setText(_translate("MainWindow", "OPEN"))
-        self.dbComboBox.setItemText(0, _translate("MainWindow", "chats"))
-        self.dbComboBox.setItemText(1, _translate("MainWindow", "rooms"))
-        self.dbComboBoxUser.setItemText(0, _translate("MainWindow", "users"))
-        self.excelSaveButton.setText(_translate("MainWindow", "xls"))
-
-    def browseMainWindow(self):
-        self.window = QtWidgets.QMainWindow()
-        self.ui = LysnScreen(self.window)
-        MainWindow.hide()
-        self.window.show()
+    def showAppWindow(self):
+        self.close()
 
     # ctrl + f
     def handleFind(self):
@@ -193,7 +143,6 @@ class LysnScreen(QWidget):
             text = self.findField.text()
             selected_items = self.tableWidget.findItems(self.findField.text(), QtCore.Qt.MatchContains)
             
-            
         allitems = self.tableWidget.findItems("", QtCore.Qt.MatchContains)
         
         # reset
@@ -214,61 +163,111 @@ class LysnScreen(QWidget):
             print("ff None")
 
     # table combo select
-    def comboEvent(self):
-        self.tableWidget.clear()
-        self.colname, self.rowlist = [], [[]]
+    def userComboEvent(self):
+        if self.userComboBox.currentText() == 'users':
+            colname, rowlist = self.userColnames[0], self.userRowlists[0]
+        elif self.userComboBox.currentText() == 'sqlite_sequence':
+            colname, rowlist = self.userColnames[1], self.userRowlists[1]
 
-        if self.dbComboBox.currentText() == 'chats':
-            self.colname, self.rowlist = self.TalkDB[0], self.TalkDB[1]
-            
-        elif self.dbComboBox.currentText() == 'rooms':
-            self.colname, self.rowlist = self.TalkDB[2], self.TalkDB[3]
-            
-        self.showTable()
+        self.showTable(colname, rowlist)
+
+    def talkComboEvent(self):
+        if self.talkComboBox.currentText() == 'chats':
+            colname, rowlist = self.talkColnames[0], self.talkRowlists[0]
+        elif self.talkComboBox.currentText() == 'rooms':
+            colname, rowlist = self.talkColnames[1], self.talkRowlists[1]
+        elif self.talkComboBox.currentText() == 'lastindex':
+            colname, rowlist = self.talkColnames[2], self.talkRowlists[2]
+        elif self.talkComboBox.currentText() == 'sqlite_sequence':
+            colname, rowlist = self.talkColnames[3], self.talkRowlists[3]
+        
+        self.showTable(colname, rowlist)
+    
+    # android id 찾기
+    def findAndriodId(self):
+        android_id = ''
+        
+        tree = parse(self.path+'settings_secure.xml')
+        root = tree.getroot()
+    
+        for name in root.iter('setting'):
+            d = name.attrib
+            for key, value in d.items():
+                if key == 'name' and value == 'android_id':
+                    android_id = d['value']
+        print(android_id)
+        return android_id
+
+    def lysnData(self):
+        android_id = self.findAndriodId()
+        self.userColnames, self.userRowlists = lysn_userDB(self.path, android_id)
+        self.talkColnames, self.talkRowlists = lysn_talkDB(self.path, android_id)
+        colname, rowlist = self.userColnames[0], self.userRowlists[0]
+        self.f_name = "user_db"
+        self.showTable(colname, rowlist)
 
     # DB 버튼 클릭 시
     def DBClicked(self):
         
-        android_id = '4f77d977f3f1c488'
-        
-        # db file 선택해서 경로 받아오기
-        global filename
-        filename = QFileDialog.getOpenFileName(self, 'Open File')
-
-        self.tableWidget.clear()
-        self.colname, self.rowlist = [], [[]]
-
-        # db file 경로에 따라 db안에 있는 아티팩트 가져오기
-        # colname에 열 제목 담기, rowlist에 각 행마다 리스트로 담기
-
-        if filename[0][-7:] == 'user.db':
-            self.dbComboBox.hide()
-            self.dbComboBoxUser.show()
-            self.colname, self.rowlist = lysn_userDB(filename[0], android_id)
+        if self.openComboBox.currentText() == 'user.db':
+            self.talkComboBox.hide()
+            self.userComboBox.show()
+            self.userComboBox.setCurrentIndex(0)
+            colname, rowlist = self.userColnames[0], self.userRowlists[0]
             self.f_name = "user_db"
         
-        elif filename[0][-7:] == 'talk.db':
-            self.dbComboBoxUser.hide()
-            self.dbComboBox.show()
-            self.TalkDB = lysn_talkDB(filename[0], android_id)
-            self.colname, self.rowlist = self.TalkDB[0], self.TalkDB[1]
+        elif self.openComboBox.currentText() == 'talk.db':
+            self.userComboBox.hide()
+            self.talkComboBox.show()
+            self.talkComboBox.setCurrentIndex(0)
+            colname, rowlist = self.talkColnames[0], self.talkRowlists[0]
             self.f_name = "talk_db"
 
-        self.showTable()
+        self.showTable(colname, rowlist)
 
-    def showTable(self):
-        self.tableWidget.setColumnCount(len(self.colname)) # col 개수 지정
-        self.tableWidget.setRowCount(len(self.rowlist)) # row 개수 지정
-        
-        self.tableWidget.setHorizontalHeaderLabels(self.colname) # 열 제목 지정
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
+    def tableHeaderClicked(self):
+        # 헤더 click 시에만 정렬하고 다시 정렬기능 off
+        # 정렬 계속 on 시켜 놓으면 다른 테이블 클릭 시 data 안보이는 현상 발생
         self.tableWidget.setSortingEnabled(True)
+        self.tableWidget.setSortingEnabled(False)
+        
+    def showTable(self, colname, rowlist):
+        self.tableWidget.clear()
+        
+        self.tableWidget.setColumnCount(len(colname)) # col 개수 지정
+        self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
+        
+        self.tableWidget.setHorizontalHeaderLabels(colname) # 열 제목 지정
+        self.tableHeader = self.tableWidget.horizontalHeader()
+        self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
+        
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # 표 수정 못하도록
+        
+        media = -1
+        for m in range(len(colname)):
+            if list(colname)[m] == '파일':
+                media = m
 
         # rowlist를 표에 지정하기
-        for i in range(len(self.rowlist)):
-            for j in range(len(self.rowlist[i])):
-                self.tableWidget.setItem(i, j, QTableWidgetItem(str(self.rowlist[i][j])))
+        for i in range(len(rowlist)):
+            for j in range(len(rowlist[i])):
+                if j == media:
+                    item = self.getImageLabel(rowlist[i][j])
+                    self.tableWidget.setCellWidget(i, j, item)
+                else:
+                    self.tableWidget.setItem(i, j, QTableWidgetItem(str(rowlist[i][j])))
+        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
+        self.colname = colname
+        self.rowlist = rowlist
+
+    def getImageLabel(self, image):
+        imageLabel = QLabel()
+        imageLabel.setScaledContents(True)
+        pixmap = QPixmap()
+        pixmap.loadFromData(image, 'jpg')
+        imageLabel.setPixmap(pixmap)
+        return imageLabel
 
     def center(self):
         frame_info = self.frameGeometry()
@@ -323,7 +322,6 @@ class LysnScreen(QWidget):
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = LysnScreen(MainWindow)
-    ui.show()
+    phoneNo = 'SM-G955N'
+    ui = LysnScreen(phoneNo)
     sys.exit(app.exec_())
