@@ -19,7 +19,7 @@ class LysnScreen(QDialog):
         self.userColnames, self.userRowlists, self.talkColnames, self.talkRowlists = [], [], [], []
 
         self.phoneNo = phoneNo
-        self.path = f'AppData/{self.phoneNo}/Lysn/'
+        self.path = f'C:/AppData/{self.phoneNo}/Lysn/'
         self.lysnData() # 미리 Lysn 데이터 모두 가져오기
         self.setupUI()
 
