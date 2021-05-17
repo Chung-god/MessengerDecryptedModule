@@ -129,12 +129,13 @@ class appScreen(QWidget):
     # 디바이스 정보 추출
     def deviceInformation(self):
         serialNo, productNo, androidVersion, self.phoneNo = '','','',''
+        moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
         try:
-            r = subprocess.check_output('cd C:\\Program Files (x86)\\Nox\\bin && adb get-serialno', shell=True)
+            r = subprocess.check_output(moveadb+' && adb get-serialno', shell=True)
             serialNo = r.decode().split()[0]
-            s = subprocess.check_output('adb shell getprop ro.product.model', shell=True)
+            s = subprocess.check_output(moveadb+' && adb shell getprop ro.product.model', shell=True)
             productNo = s.decode().split()[0]
-            d = subprocess.check_output('adb shell getprop ro.build.version.release', shell=True)
+            d = subprocess.check_output(moveadb+' && adb shell getprop ro.build.version.release', shell=True)
             androidVersion = d.decode().split()[0]
             self.phoneNo = productNo
         except:
