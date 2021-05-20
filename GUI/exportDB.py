@@ -1,6 +1,11 @@
 from pysqlcipher3 import dbapi2 as sqlcipher
-from lysn_key import userDB_key, talkDB_key
+from Crypto.Cipher import AES
+import hashlib
+import base64
 import os
+
+from lysn_key import userDB_key, talkDB_key
+from tong_decrypt import tong_dec
 
 # lysn user.db 내용 추출 
 def lysn_userDB(path, android_id):
@@ -32,7 +37,6 @@ def lysn_userDB(path, android_id):
 def lysn_talkDB(path, android_id):
     app = 'lysn'
     dbfile = path + 'databases/talk.db'
-    mediaPath = path + 'LysnMedia/'
     
     # user.db 먼저 열어서 useridx 값 받아오기
     #udbfile=dbfile.replace('talk.db', 'user.db')
@@ -51,7 +55,7 @@ def lysn_talkDB(path, android_id):
     # 테이블 추출할 내용 지정
     # chats
     chatsColname = {'time':'시간', 'sender':'보낸사람', 'type':'타입', 'roomidx':'채팅방 번호', 'text':'메시지', 'thumburl':'파일'}
-    chatsRowlist = export(app, cur, 'chats', chatsColname, ulist, mediaPath) # talk.db에 chats 테이블 내용 추출
+    chatsRowlist = export(app, cur, 'chats', chatsColname, ulist, path) # talk.db에 chats 테이블 내용 추출
     
     # rooms
     roomsColname = {'roomidx':'채팅방 번호', 'name':'채팅방 인원', 'lastChatTime':'시간', 'lastChatSender':'마지막 보낸사람', 'lastChatType':'타입', 'lastChatText':'마지막 보낸 메시지'}
@@ -71,7 +75,7 @@ def lysn_talkDB(path, android_id):
     return colname, rowlist
 
 # lysn data 변환
-def lysnConversation(row, colname, col_defs, compare, mediaPath):
+def lysnConversation(row, colname, col_defs, compare, path):
     d_row=[]
     for en, kr in colname.items():
         value = row[col_defs[en]]
@@ -96,7 +100,8 @@ def lysnConversation(row, colname, col_defs, compare, mediaPath):
             value = ', '.join(names)  
 
         # 미디어 파일 추출
-        elif kr == '파일' and mediaPath != None:
+        elif kr == '파일' and path != None:
+            mediaPath = path+'LysnMedia/'
             filelist = os.listdir(mediaPath)
             for file in filelist:
                 if file == value:
@@ -104,11 +109,72 @@ def lysnConversation(row, colname, col_defs, compare, mediaPath):
                     f = open(mediaPath + file, 'rb')
                     value = f.read()
                     f.close()
+            
         d_row.append(value)
 
     return d_row
+
+def tongtong_gcmDB(path):
+    app = 'TongTong'
+
+    # db 열기
+    dbfile = path + 'databases/gcm.db'
     
-# 내용 추출하기
+    db = sqlcipher.connect(dbfile)
+    cur = db.cursor()
+    
+    # 테이블 추출할 내용 지정
+    # chatting
+    chattingColname = {'date' : '시간', 'msg' : '메시지', 'name' : '보낸사람', 'userId' : '유저 고유 아이디', 'thumbnailPath':'사진'}
+    chattingRowlist = export(app, cur, 'chatting', chattingColname, None, path)  # gcm.db에 chatting 테이블 내용 추출
+
+    # chatRoomList
+    roomColname = {'roomName':'채팅방 이름', 'date' : '시간', 'msg' : '마지막 메시지', 'name' : '마지막 보낸사람', 'userId' : '유저 고유 아이디'}
+    roomRowlist = export(app, cur, 'chatRoomList', roomColname)  # gcm.db에 chatting 테이블 내용 추출
+
+    # contact
+    contactColname = {'name': '친구 이름', 'phone': '핸드폰 번호'}
+    contactRowlist = export(app, cur, 'contacts', contactColname)  # gcm.db에 contact 테이블 내용 추출
+
+    colname = [chattingColname.values(), roomColname.values(), contactColname.values()]
+    rowlist = [chattingRowlist, roomRowlist, contactRowlist]
+
+    return colname, rowlist
+
+
+# TongTong data 변환
+def tongtongConversation(row, colname, col_defs, path):
+    d_row = []
+    flag = 0
+    idx = 0
+    for en, kr in colname.items():
+        value = row[col_defs[en]]
+        if en == 'msg':
+            enc_msg = row[col_defs[en]]
+            flag = 1
+            msgidx = idx
+        elif en == 'userId':
+            userId = row[col_defs[en]]
+
+        # 미디어 파일 추출
+        elif kr == '사진' and value != '' and value != None:
+            s=value.split('/')
+            media=path+'TongMedia/'+s[-2]+'/'+s[-1]
+            
+            f = open(media, 'rb')
+            value = f.read()
+            f.close()
+            
+        idx+=1
+        d_row.append(value)
+
+    if flag == 1:
+        d_row[msgidx] = tong_dec(userId, enc_msg)
+
+    return d_row
+
+
+# Lysn, TongTong 내용 추출하기
 def export(app, cur, table, colname, compare=None, mediaPath=None):
     cur.execute('pragma table_info('+table+')')
     rows = cur.fetchall()
@@ -121,24 +187,39 @@ def export(app, cur, table, colname, compare=None, mediaPath=None):
     if app == 'lysn':
         rowlist = [lysnConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
 
+    if app == 'TongTong':
+        rowlist = [tongtongConversation(row,colname,col_defs,mediaPath) for row in rows]
+
     return rowlist
 
 
+
+
 if __name__ == '__main__':
-    
+    '''
     path = "AppData/SM-G955N/Lysn/"
     android_id = '4b0629381a2249a5'
-    '''
+    
     colnames, rowlists = lysn_userDB(path, android_id)
     
     print(colnames[0])
     for row in rowlists[0]:
         print(row)
     '''
+    path = "C:/AppData/SM-G955N/Lysn/"
+    android_id = '4b0629381a2249a5'
     
     colnames, rowlists = lysn_talkDB(path, android_id)
     
     print(colnames[1])
     for row in rowlists[1]:
         print(row)
+    '''
+
+    path = "C:/AppData/SM-G955N/TongTong/"
+    colnames, rowlists = tongtong_gcmDB(path)
     
+    print(colnames[0])
+    #for row in rowlists[0]:
+    #    print(row)
+    '''
