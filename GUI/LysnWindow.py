@@ -33,7 +33,7 @@ class LysnScreen(QDialog):
         self.setPalette(palette)
 
         # Window Setting
-        self.setGeometry(500, 70, 800, 600)
+        self.setGeometry(500, 70, 1200, 800)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
         self.setContentsMargins(10, 10, 10, 10)
@@ -253,7 +253,7 @@ class LysnScreen(QDialog):
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                if j == media and rowlist[i][j] != '':
+                if j == media and isinstance(rowlist[i][j], str) == False:
                     item = self.getImageLabel(rowlist[i][j])
                     self.tableWidget.setCellWidget(i, j, item)
                 else:

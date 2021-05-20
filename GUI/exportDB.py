@@ -208,11 +208,12 @@ if __name__ == '__main__':
     '''
     path = "C:/AppData/SM-G955N/Lysn/"
     android_id = '4b0629381a2249a5'
-    
+    android_id = '4f77d977f3f1c488' 
     colnames, rowlists = lysn_talkDB(path, android_id)
     
-    print(colnames[1])
-    for row in rowlists[1]:
+    print(colnames[0])
+    #print(rowlists[0][4])
+    for row in rowlists[0]:
         print(row)
     '''
 
