@@ -28,7 +28,7 @@ class LysnScreen(QDialog):
 
         # Window Backgrond
         palette = QPalette()
-        palette.setColor(QPalette.Background, QColor(242, 242, 242))
+        palette.setColor(QPalette.Background, QColor(255, 255, 255))
         self.setAutoFillBackground(True)
         self.setPalette(palette)
 
@@ -43,11 +43,9 @@ class LysnScreen(QDialog):
         self.shortcut.activated.connect(self.handleFind)
 
         # back/search button
-        self.backButton = Button(QPixmap("image/back.png"), 35, self.showAppWindow)
-        self.searchButton = Button(QPixmap("image/search.png"), 35, self.search_items)
-        self.backButton.setStyleSheet('background:transparent')
-        self.searchButton.setStyleSheet('background:transparent')
-
+        self.backButton = Button(QPixmap("image/back.png"), 45, self.showAppWindow)
+        self.searchButton = Button(QPixmap("image/search.png"), 45, self.search_items)
+        
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
@@ -244,6 +242,10 @@ class LysnScreen(QDialog):
 
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # 표 너비 지정
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
+        #self.tableWidget.item(3, 5).setBackground(QtGui.QColor(100,100,150))
+        #hitem = self.tableWidget.horizontalHeaderItem(1) 
+        #if hitem is not None: 
+        #    hitem.setBackground(QBrush(Qt.cyan))
 
         media = -1
         for m in range(len(colname)):
@@ -325,6 +327,7 @@ if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
     phoneNo = 'SM-G955N'
     ui = LysnScreen(phoneNo)
     sys.exit(app.exec_())

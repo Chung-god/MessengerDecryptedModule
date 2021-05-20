@@ -27,12 +27,12 @@ class TongTongScreen(QDialog):
         
         # Window Backgrond
         palette = QPalette()
-        palette.setColor( QPalette.Background , QColor(242, 242, 242))
+        palette.setColor( QPalette.Background , QColor(255, 255, 255))
         self.setAutoFillBackground(True)
         self.setPalette(palette)
         
         # Window Setting
-        self.setGeometry(500, 70, 800, 600)
+        self.setGeometry(500, 70, 1200, 800)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
         self.setContentsMargins(10,10,10,10)
@@ -277,6 +277,7 @@ class TongTongScreen(QDialog):
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create('Fusion'))
     phoneNo = 'SM-G955N'
     ui = TongTongScreen(phoneNo)
     sys.exit(app.exec_())

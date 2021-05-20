@@ -198,7 +198,7 @@ class appScreen(QWidget):
 
 if __name__ == "__main__":
     import sys
-
     app = QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create('Fusion'))
     ui = appScreen()
     sys.exit(app.exec_())
