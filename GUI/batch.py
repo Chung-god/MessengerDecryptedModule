@@ -15,9 +15,9 @@ def TongTongData(phoneNo):
     moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
     if os.path.exists('/sdcard/TongTong'):
         subprocess.call(moveadb+' && adb shell rm -rf /sdcard/TongTong', shell=True)
-    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/tomato.solution.tongtong/ /sdcard/TongTong"', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/tomato.solution.tongtong /sdcard/TongTong"', shell=True)
     subprocess.call(moveadb+' && adb shell "su root cp -r /storage/emulated/0/Pictures/TongTong/thumbnail/ /sdcard/TongTong/TongMedia"', shell=True)
-    subprocess.call(moveadb+' && adb shell "su root cp -r /storage/emulated/0/tongtong/ /sdcard/TongTong/Tongaudio"', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /storage/emulated/0/tongtong/ /sdcard/TongTong/TongAudio"', shell=True)
     subprocess.call(moveadb+' && adb shell "su root cp -r /storage/emulated/0/video/TongTong/encoded_video/ /sdcard/TongTong/TongVideo"', shell=True)
     subprocess.call(moveadb+f' && adb pull /sdcard/TongTong C:/AppData/{phoneNo}', shell=True)
     subprocess.call(moveadb+' && adb shell rm -rf /sdcard/TongTong', shell=True)
@@ -31,3 +31,10 @@ def KakaoTalkData(phoneNo):
     subprocess.call(moveadb+f' && adb pull /sdcard/KakaoTalk C:/AppData/{phoneNo}', shell=True)
     subprocess.call(moveadb+' && adb shell rm -rf /sdcard/KakaoTalk', shell=True)
 
+def WickrData(phoneNo):
+    moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
+    if os.path.exists('/sdcard/Wickr'):
+        subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Wickr', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2/ /sdcard/Wickr"', shell=True)
+    subprocess.call(moveadb+f' && adb pull /sdcard/Wickr C:/AppData/{phoneNo}', shell=True)
+    subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Wickr', shell=True)

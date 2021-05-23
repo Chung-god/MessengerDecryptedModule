@@ -7,25 +7,24 @@ from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
 from xml.etree.ElementTree import parse
 
-from exportDB import lysn_userDB, lysn_talkDB
+from exportDB import wickrDB
 from button import Button
+
 from videoWindow import video, image
 
 import os
-
-class LysnScreen(QDialog):
+class WickrScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
         # 초기화
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
-        self.userColnames, self.userRowlists, self.talkColnames, self.talkRowlists = [], [], [], []
+        self.wickrColnames, self.wickrRowlists = [], []
 
         self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/Lysn/'
-        self.lysnData()  # 미리 Lysn 데이터 모두 가져오기
+        self.path = f'C:/AppData/{self.phoneNo}/Wickr/'
         self.setupUI()
-    
+
     def setupUI(self):
 
         # Window Backgrond
@@ -56,16 +55,6 @@ class LysnScreen(QDialog):
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
 
-        # combo box talk
-        self.talkComboBox = QComboBox()
-        self.talkComboBox.addItem("chats")
-        self.talkComboBox.addItem("rooms")
-        self.talkComboBox.addItem("lastindex")
-        self.talkComboBox.addItem("sqlite_sequence")
-        self.talkComboBox.setFixedWidth(100)
-        self.talkComboBox.activated.connect(self.talkComboEvent)
-        self.talkComboBox.hide()
-
         # excel button
         self.excelSaveButton = QPushButton()
         self.excelSaveButton.setFixedWidth(100)
@@ -74,17 +63,19 @@ class LysnScreen(QDialog):
 
         # open combo box
         self.openComboBox = QComboBox()
-        self.openComboBox.addItem("user.db")
-        self.openComboBox.addItem("talk.db")
+        self.openComboBox.addItem("wickr.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
 
-        # combo box user
-        self.userComboBox = QComboBox()
-        self.userComboBox.addItem("users")
-        self.userComboBox.addItem("sqlite_sequence")
-        self.userComboBox.setFixedWidth(100)
-        self.userComboBox.activated.connect(self.userComboEvent)
+        # combo box wickr
+        self.wickrComboBox = QComboBox()
+        self.wickrComboBox.addItem("Wickr_Message")
+        self.wickrComboBox.addItem("Wickr_User")
+        self.wickrComboBox.setFixedWidth(100)
+        self.wickrComboBox.activated.connect(self.wickrComboEvent)
+
+        self.password = QLabel()
+        self.passerror = QLabel()
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
@@ -93,8 +84,9 @@ class LysnScreen(QDialog):
         hbox1.addWidget(self.searchButton)
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
-        hbox2.addWidget(self.userComboBox)
-        hbox2.addWidget(self.talkComboBox)
+        hbox2.addWidget(self.wickrComboBox)
+        hbox2.addStretch(1)
+        hbox2.addWidget(self.passerror)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
 
@@ -106,6 +98,16 @@ class LysnScreen(QDialog):
         self.setLayout(layout)
         self.center()
         self.show()
+
+        self.showDialog()
+        
+    def showDialog(self):
+        text, ok = QInputDialog.getText(self, 'Input Dialog', 'Enter your password :')
+        if ok:
+            self.password.setText(str(text))
+            self.wickrData()  # 미리 Wickr 데이터 모두 가져오기
+        else:
+            self.passerror.setText('데이터를 가져올 수 없습니다.')
 
     def showAppWindow(self):
         self.close()
@@ -154,12 +156,9 @@ class LysnScreen(QDialog):
             if item in selected_items:
                 item.setBackground(QBrush(Qt.black))
                 item.setForeground(QBrush(Qt.white))
-                item.setFont(QFont("Helvetica", 9, QFont.Bold))
+                item.setFont(QFont("Helvetica", 11, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.findField.text() != "":
-            pass
-
-        elif self.searchBox.text() == "":
+        if self.searchBox.text() == "":
             reset(self, allitems)
             print("sb None")
         elif self.on_off == 1 and self.findField.text() == "":
@@ -167,63 +166,33 @@ class LysnScreen(QDialog):
             print("ff None")
 
     # table combo select
-    def userComboEvent(self):
-        if self.userComboBox.currentText() == 'users':
-            colname, rowlist = self.userColnames[0], self.userRowlists[0]
-        elif self.userComboBox.currentText() == 'sqlite_sequence':
-            colname, rowlist = self.userColnames[1], self.userRowlists[1]
+    def wickrComboEvent(self):
+        if self.wickrComboBox.currentText() == 'Wickr_Message':
+            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+        elif self.wickrComboBox.currentText() == 'Wickr_User':
+            colname, rowlist = self.wickrColnames[1], self.wickrRowlists[1]
 
         self.showTable(colname, rowlist)
 
-    def talkComboEvent(self):
-        if self.talkComboBox.currentText() == 'chats':
-            colname, rowlist = self.talkColnames[0], self.talkRowlists[0]
-        elif self.talkComboBox.currentText() == 'rooms':
-            colname, rowlist = self.talkColnames[1], self.talkRowlists[1]
-        elif self.talkComboBox.currentText() == 'lastindex':
-            colname, rowlist = self.talkColnames[2], self.talkRowlists[2]
-        elif self.talkComboBox.currentText() == 'sqlite_sequence':
-            colname, rowlist = self.talkColnames[3], self.talkRowlists[3]
-
-        self.showTable(colname, rowlist)
-
-    # android id 찾기
-    def findAndriodId(self):
-        android_id = ''
-        tree = parse(self.path + 'settings_secure.xml')
-        root = tree.getroot()
-
-        for name in root.iter('setting'):
-            d = name.attrib
-            for key, value in d.items():
-                if key == 'name' and value == 'android_id':
-                    android_id = d['value']
-        return android_id
-
-    def lysnData(self):
-        android_id = self.findAndriodId()
-        self.userColnames, self.userRowlists = lysn_userDB(self.path, android_id)
-        self.talkColnames, self.talkRowlists = lysn_talkDB(self.path, android_id, self.userRowlists)
-        colname, rowlist = self.userColnames[0], self.userRowlists[0]
-        self.f_name = "user_db"
-        self.showTable(colname, rowlist)
+    def wickrData(self):
+        #password = 'k2185717'
+        try:
+            self.wickrColnames, self.wickrRowlists = wickrDB(self.path, self.password.text())
+            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+            self.f_name = "user_db"
+            self.showTable(colname, rowlist)
+            self.passerror.hide()
+        except:
+            self.passerror.setText('비밀번호가 틀렸습니다.')
+            self.showDialog()
 
     # DB 버튼 클릭 시
     def DBClicked(self):
 
-        if self.openComboBox.currentText() == 'user.db':
-            self.talkComboBox.hide()
-            self.userComboBox.show()
-            self.userComboBox.setCurrentIndex(0)
-            colname, rowlist = self.userColnames[0], self.userRowlists[0]
-            self.f_name = "user_db"
-
-        elif self.openComboBox.currentText() == 'talk.db':
-            self.userComboBox.hide()
-            self.talkComboBox.show()
-            self.talkComboBox.setCurrentIndex(0)
-            colname, rowlist = self.talkColnames[0], self.talkRowlists[0]
-            self.f_name = "talk_db"
+        if self.openComboBox.currentText() == 'wickr.db':
+            self.wickrComboBox.setCurrentIndex(0)
+            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+            self.f_name = "wickr_db"
 
         self.showTable(colname, rowlist)
 
@@ -248,61 +217,54 @@ class LysnScreen(QDialog):
         
         media = -1
         for m in range(len(colname)):
-            if list(colname)[m] == '파일':
+            if list(colname)[m] == '미디어':
                 media = m
             elif list(colname)[m] == '타입':
                 types = m
-
+                
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
                 if j == media:
-                    tp = rowlist[i][types]
+                    tp = rowlist[i][types][:5]
                     if tp == 'image': # 사진
-                        thumbnail = os.path.splitext(rowlist[i][j])[0].replace("i_o_", "i_t_")
-                        mpath = self.path+'LysnMedia/'+thumbnail
-
-                        if os.path.isfile(mpath) == False: # 썸네일 없을 경우
-                            if os.path.isfile(self.path+'LysnMedia/'+rowlist[i][j]) == False: #원본파일 없을 경우
-                                mpath = 'image/noimage.png'
-                            else: # 원본 파일 있는 경우
-                                mpath = 'image/image.png'
-
+                        if os.path.isfile(self.path+'files/dec/'+rowlist[i][j]) == False: #원본파일 없을 경우
+                            mpath = 'image/noimage.png'
+                        else: # 원본 파일 있는 경우
+                            mpath = 'image/image.png'
                         self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
                         self.btn1.setText(rowlist[i][j])
+                        self.btn1.setCursor(QCursor(Qt.PointingHandCursor))
                         self.tableWidget.setCellWidget(i,j,self.btn1)
 
                     elif tp == 'video': # 비디오
-                        thumbnail = os.path.splitext(rowlist[i][j])[0].replace("v_o_", "v_t_")
-                        mpath = self.path+'LysnMedia/'+thumbnail
-
-                        if os.path.isfile(mpath) == False:
-                            if os.path.isfile(self.path+'LysnMedia/'+rowlist[i][j]) == False:
-                                mpath = 'image/noimage.png'
-                            else:
-                                mpath = 'image/video.png'
-                            
+                        if os.path.isfile(self.path+'files/dec/'+rowlist[i][j]) == False: #원본파일 없을 경우
+                            mpath = 'image/noimage.png'
+                        else: # 원본 파일 있는 경우
+                            mpath = 'image/video.png'
                         self.btn2 = Button(QPixmap(mpath), 30, self.videoWindow)
                         self.btn2.setText(rowlist[i][j])
+                        self.btn2.setCursor(QCursor(Qt.PointingHandCursor))
                         self.tableWidget.setCellWidget(i,j,self.btn2)
                 else: # 텍스트
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
                     self.tableWidget.setItem(i, j, item)
+
         self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname
         self.rowlist = rowlist
 
     def imageWindow(self):
         file = self.sender().text()
-        mediaPath = self.path+'LysnMedia/'+file
+        mediaPath = self.path+'files/dec/'+file
         image(mediaPath)
-        
+
     def videoWindow(self):
         file = self.sender().text()
-        mediaPath = self.path+'LysnMedia/'+file
+        mediaPath = self.path+'files/dec/'+file
         video(mediaPath)
-        
+    
     def center(self):
         frame_info = self.frameGeometry()
         display_center = QDesktopWidget().availableGeometry().center()
@@ -317,7 +279,7 @@ class LysnScreen(QDialog):
         # create Excel
         wb = openpyxl.Workbook()
         sheet = wb.active
-        sheet.title = "Lysn"
+        sheet.title = "Wickr"
         col_excel = list(self.colname)[0:5]
 
         for x in range(1, len(col_excel) + 1):
@@ -351,7 +313,7 @@ class LysnScreen(QDialog):
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.border = Border(right=Side(border_style="thick"))
 
-        wb.save("Lysn_" + self.f_name + ".xlsx")
+        wb.save("Wickr_" + self.f_name + ".xlsx")
 
 
 if __name__ == "__main__":
@@ -360,5 +322,5 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
     phoneNo = 'SM-G955N'
-    ui = LysnScreen(phoneNo)
+    ui = WickrScreen(phoneNo)
     sys.exit(app.exec_())

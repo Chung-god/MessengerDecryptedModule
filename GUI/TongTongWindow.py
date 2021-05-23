@@ -9,7 +9,9 @@ from xml.etree.ElementTree import parse
 
 from exportDB import tongtong_gcmDB
 from button import Button
+from videoWindow import video, image
 
+import os
 class TongTongScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
@@ -117,38 +119,45 @@ class TongTongScreen(QDialog):
     
     # search box
     def search_items(self):
-        
-        #rest font
+
+        # rest font
         def reset(self, items):
             for item in items:
-                item.setBackground(QBrush(Qt.white))
-                item.setForeground(QBrush(Qt.black))
-                item.setFont(QFont())
-        
+                if item == None:
+                    pass
+                else:
+                    item.setBackground(QBrush(Qt.white))
+                    item.setForeground(QBrush(Qt.black))
+                    item.setFont(QFont())
+
         if self.on_off == 0:
             text = self.searchBox.text()
             selected_items = self.tableWidget.findItems(self.searchBox.text(), QtCore.Qt.MatchContains)
-        else:
+        elif self.on_off == 1:
             text = self.findField.text()
             selected_items = self.tableWidget.findItems(self.findField.text(), QtCore.Qt.MatchContains)
-            
+
         allitems = self.tableWidget.findItems("", QtCore.Qt.MatchContains)
-        
+
         # reset
         reset(self, allitems)
-             
+
         # highlight the search results
         for item in allitems:
-            if item in selected_items:   
+            if item in selected_items:
                 item.setBackground(QBrush(Qt.black))
                 item.setForeground(QBrush(Qt.white))
-                item.setFont(QFont("Helvetica", 10, QFont.Bold))
-               
-        if self.searchBox.text() == "":
-            reset(self, allitems)
+                item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        elif self.on_off == 1 and self.findField.text() =="":
+        if self.searchBox.text() == "" and self.findField.text() != "":
+            pass
+
+        elif self.searchBox.text() == "":
             reset(self, allitems)
+            print("sb None")
+        elif self.on_off == 1 and self.findField.text() == "":
+            reset(self, allitems)
+            print("ff None")
 
 
     # table combo select
@@ -188,7 +197,7 @@ class TongTongScreen(QDialog):
     def showTable(self, colname, rowlist):
         self.tableWidget.clear()
         
-        self.tableWidget.setColumnCount(len(colname)) # col 개수 지정
+        self.tableWidget.setColumnCount(len(colname)-1) # col 개수 지정
         self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
         
         self.tableWidget.setHorizontalHeaderLabels(colname) # 열 제목 지정
@@ -202,27 +211,41 @@ class TongTongScreen(QDialog):
         for m in range(len(colname)):
             if list(colname)[m] == '사진':
                 media = m
-
+            if list(colname)[m] == '비디오':
+                video = m
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                if j == media and rowlist[i][j] != '':
-                    item = self.getImageLabel(rowlist[i][j])
-                    self.tableWidget.setCellWidget(i, j, item)
-                else:
-                    self.tableWidget.setItem(i, j, QTableWidgetItem(str(rowlist[i][j])))
-                    
-        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
+                if j == media: # 사진 or 비디오
+                    mpath = rowlist[i][j]
+                    vpath = rowlist[i][video]
+                    if rowlist[i][video] != '' and rowlist[i][video] != None: # 사진o 비디오o
+                        if mpath == '': # 사진x 비디오o
+                            mpath = 'image/audio.png' 
+                            vpath = vpath.replace('TongVideo','TongAudio')
+                        self.btn1 = Button(QPixmap(mpath), 30, self.videoWindow)
+                        self.btn1.setText(vpath)
+                        self.tableWidget.setCellWidget(i,j,self.btn1)
+                    elif mpath != '': # 사진o 비디오x
+                        self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
+                        self.btn1.setText(rowlist[i][j])
+                        self.tableWidget.setCellWidget(i,j,self.btn1)
+                else: # 텍스트
+                    item = QTableWidgetItem(str(rowlist[i][j]))
+                    item.setTextAlignment(Qt.AlignCenter)
+                    self.tableWidget.setItem(i, j, item)
+
+        self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname
         self.rowlist = rowlist
 
-    def getImageLabel(self, image):
-        imageLabel = QLabel()
-        imageLabel.setScaledContents(True)
-        pixmap = QPixmap()
-        pixmap.loadFromData(image, 'jpg')
-        imageLabel.setPixmap(pixmap)
-        return imageLabel
+    def imageWindow(self):
+        file = self.sender().text()
+        image(file)
+        
+    def videoWindow(self):
+        file = self.sender().text()
+        video(file)
 
     def center(self):
         frame_info = self.frameGeometry()
