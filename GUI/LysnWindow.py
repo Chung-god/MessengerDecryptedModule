@@ -9,7 +9,9 @@ from xml.etree.ElementTree import parse
 
 from exportDB import lysn_userDB, lysn_talkDB
 from button import Button
+from videoWindow import video, image
 
+import os
 
 class LysnScreen(QDialog):
     def __init__(self, phoneNo):
@@ -23,17 +25,17 @@ class LysnScreen(QDialog):
         self.path = f'C:/AppData/{self.phoneNo}/Lysn/'
         self.lysnData()  # 미리 Lysn 데이터 모두 가져오기
         self.setupUI()
-
+    
     def setupUI(self):
 
         # Window Backgrond
         palette = QPalette()
-        palette.setColor(QPalette.Background, QColor(242, 242, 242))
+        palette.setColor(QPalette.Background, QColor(255, 255, 255))
         self.setAutoFillBackground(True)
         self.setPalette(palette)
 
         # Window Setting
-        self.setGeometry(500, 70, 800, 600)
+        self.setGeometry(500, 70, 1200, 800)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
         self.setContentsMargins(10, 10, 10, 10)
@@ -43,11 +45,9 @@ class LysnScreen(QDialog):
         self.shortcut.activated.connect(self.handleFind)
 
         # back/search button
-        self.backButton = Button(QPixmap("image/back.png"), 35, self.showAppWindow)
-        self.searchButton = Button(QPixmap("image/search.png"), 35, self.search_items)
-        self.backButton.setStyleSheet('background:transparent')
-        self.searchButton.setStyleSheet('background:transparent')
-
+        self.backButton = Button(QPixmap("image/back.png"), 45, self.showAppWindow)
+        self.searchButton = Button(QPixmap("image/search.png"), 45, self.search_items)
+        
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
@@ -133,9 +133,12 @@ class LysnScreen(QDialog):
         # rest font
         def reset(self, items):
             for item in items:
-                item.setBackground(QBrush(Qt.white))
-                item.setForeground(QBrush(Qt.black))
-                item.setFont(QFont())
+                if item == None:
+                    pass
+                else:
+                    item.setBackground(QBrush(Qt.white))
+                    item.setForeground(QBrush(Qt.black))
+                    item.setFont(QFont())
 
         if self.on_off == 0:
             text = self.searchBox.text()
@@ -190,7 +193,6 @@ class LysnScreen(QDialog):
     # android id 찾기
     def findAndriodId(self):
         android_id = ''
-
         tree = parse(self.path + 'settings_secure.xml')
         root = tree.getroot()
 
@@ -199,13 +201,12 @@ class LysnScreen(QDialog):
             for key, value in d.items():
                 if key == 'name' and value == 'android_id':
                     android_id = d['value']
-        print(android_id)
         return android_id
 
     def lysnData(self):
         android_id = self.findAndriodId()
         self.userColnames, self.userRowlists = lysn_userDB(self.path, android_id)
-        self.talkColnames, self.talkRowlists = lysn_talkDB(self.path, android_id)
+        self.talkColnames, self.talkRowlists = lysn_talkDB(self.path, android_id, self.userRowlists)
         colname, rowlist = self.userColnames[0], self.userRowlists[0]
         self.f_name = "user_db"
         self.showTable(colname, rowlist)
@@ -247,35 +248,64 @@ class LysnScreen(QDialog):
 
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # 표 너비 지정
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
-
+        
         media = -1
         for m in range(len(colname)):
             if list(colname)[m] == '파일':
                 media = m
+            elif list(colname)[m] == '타입':
+                types = m
 
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                item2 = QTableWidgetItem(rowlist[i][j])
-                item2.setTextAlignment(Qt.AlignHCenter)
-                if j == media and isinstance(rowlist[i][j], str) == False:
-                    item = self.getImageLabel(rowlist[i][j])
-                    self.tableWidget.setCellWidget(i, j, item)
-                else:
-                    self.tableWidget.setItem(i, j, QTableWidgetItem(str(rowlist[i][j])))
+                if j == media:
+                    tp = rowlist[i][types]
+                    if tp == 'image': # 사진
+                        thumbnail = os.path.splitext(rowlist[i][j])[0].replace("i_o_", "i_t_")
+                        mpath = self.path+'LysnMedia/'+thumbnail
 
-        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
+                        if os.path.isfile(mpath) == False: # 썸네일 없을 경우
+                            if os.path.isfile(self.path+'LysnMedia/'+rowlist[i][j]) == False: #원본파일 없을 경우
+                                mpath = 'image/noimage.png'
+                            else: # 원본 파일 있는 경우
+                                mpath = 'image/image.png'
+
+                        self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
+                        self.btn1.setText(rowlist[i][j])
+                        self.tableWidget.setCellWidget(i,j,self.btn1)
+
+                    elif tp == 'video': # 비디오
+                        thumbnail = os.path.splitext(rowlist[i][j])[0].replace("v_o_", "v_t_")
+                        mpath = self.path+'LysnMedia/'+thumbnail
+
+                        if os.path.isfile(mpath) == False:
+                            if os.path.isfile(self.path+'LysnMedia/'+rowlist[i][j]) == False:
+                                mpath = 'image/noimage.png'
+                            else:
+                                mpath = 'image/video.png'
+                            
+                        self.btn2 = Button(QPixmap(mpath), 30, self.videoWindow)
+                        self.btn2.setText(rowlist[i][j])
+                        self.tableWidget.setCellWidget(i,j,self.btn2)
+                else: # 텍스트
+                    item = QTableWidgetItem(str(rowlist[i][j]))
+                    item.setTextAlignment(Qt.AlignCenter)
+                    self.tableWidget.setItem(i, j, item)
+        self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname
         self.rowlist = rowlist
 
-    def getImageLabel(self, image):
-        imageLabel = QLabel()
-        imageLabel.setScaledContents(True)
-        pixmap = QPixmap()
-        pixmap.loadFromData(image, 'jpg')
-        imageLabel.setPixmap(pixmap)
-        return imageLabel
-
+    def imageWindow(self):
+        file = self.sender().text()
+        mediaPath = self.path+'LysnMedia/'+file
+        image(mediaPath)
+        
+    def videoWindow(self):
+        file = self.sender().text()
+        mediaPath = self.path+'LysnMedia/'+file
+        video(mediaPath)
+        
     def center(self):
         frame_info = self.frameGeometry()
         display_center = QDesktopWidget().availableGeometry().center()
@@ -331,6 +361,7 @@ if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    phoneNo = 'SM-G930K'
+    app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
+    phoneNo = 'SM-G955N'
     ui = LysnScreen(phoneNo)
     sys.exit(app.exec_())

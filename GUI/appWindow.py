@@ -9,7 +9,9 @@ import shutil
 
 from LysnWindow import LysnScreen
 from TongTongWindow import TongTongScreen
-from batch import LysnData, TongTongData, KakaoTalkData
+from WickrWindow import WickrScreen
+
+from batch import LysnData, TongTongData, KakaoTalkData, WickrData
 from button import Button
 
 
@@ -91,7 +93,7 @@ class appScreen(QWidget):
         self.WeChatButton = Button(QPixmap("image/wechat.png"), 130)
         self.LysnButton = Button(QPixmap("image/lysn.png"), 130, self.showLysnWindow)
         self.TongTongButton = Button(QPixmap("image/tong.png"), 130, self.showTongTongWindow)
-        self.WickrButton = Button(QPixmap("image/wickr.png"), 130)
+        self.WickrButton = Button(QPixmap("image/wickr.png"), 130, self.showWickrWindow)
 
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.KakaoTalkButton.setCursor(QCursor(Qt.PointingHandCursor))
@@ -171,6 +173,19 @@ class appScreen(QWidget):
         self.tongtongWindow.exec()
         self.show()
 
+    # TongTongWindow로 이동
+    def showWickrWindow(self):
+        reply = self.checkData('Wickr')
+        if reply == 'Yes':
+            WickrData(self.phoneNo)  # Wickr 데이터 추출
+        elif reply == 'back':
+            return
+
+        self.hide()  # hide main window
+        self.WickrWindow = WickrScreen(self.phoneNo)
+        self.WickrWindow.exec()
+        self.show()
+
     def checkData(self, app):
         if os.path.exists(f'C:/AppData/{self.phoneNo}/{app}'):
             reply = QMessageBox.question(self, 'Message', f'이미 {app} 데이터가 존재합니다.\n{app} 데이터를 다시 추출하시겠습니까?',
@@ -198,7 +213,7 @@ class appScreen(QWidget):
 
 if __name__ == "__main__":
     import sys
-
     app = QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create('Fusion'))
     ui = appScreen()
     sys.exit(app.exec_())

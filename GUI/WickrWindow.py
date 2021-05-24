@@ -7,48 +7,46 @@ from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
 from xml.etree.ElementTree import parse
 
-from exportDB import tongtong_gcmDB
+from exportDB import wickrDB
 from button import Button
+
 from videoWindow import video, image
 
 import os
-class TongTongScreen(QDialog):
+class WickrScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
         # 초기화
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
-        self.gcmColnames, self.gcmRowlists = [], []
+        self.wickrColnames, self.wickrRowlists = [], []
 
         self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/TongTong/'
-        self.TongTongData() # 미리 TongTong 데이터 모두 가져오기
+        self.path = f'C:/AppData/{self.phoneNo}/Wickr/'
         self.setupUI()
 
     def setupUI(self):
-        
+
         # Window Backgrond
         palette = QPalette()
-        palette.setColor( QPalette.Background , QColor(255, 255, 255))
+        palette.setColor(QPalette.Background, QColor(255, 255, 255))
         self.setAutoFillBackground(True)
         self.setPalette(palette)
-        
+
         # Window Setting
         self.setGeometry(500, 70, 1200, 800)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
-        self.setContentsMargins(10,10,10,10)
+        self.setContentsMargins(10, 10, 10, 10)
 
-        # Ctrl+ F 
+        # Ctrl+ F
         self.shortcut = QShortcut(QKeySequence('Ctrl+f'), self)
         self.shortcut.activated.connect(self.handleFind)
 
         # back/search button
-        self.backButton = Button(QPixmap("image/back.png"), 35, self.showAppWindow)
-        self.searchButton = Button(QPixmap("image/search.png"), 35, self.search_items)
-        self.backButton.setStyleSheet('background:transparent')
-        self.searchButton.setStyleSheet('background:transparent')
-
+        self.backButton = Button(QPixmap("image/back.png"), 45, self.showAppWindow)
+        self.searchButton = Button(QPixmap("image/search.png"), 45, self.search_items)
+        
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
@@ -62,20 +60,22 @@ class TongTongScreen(QDialog):
         self.excelSaveButton.setFixedWidth(100)
         self.excelSaveButton.setText('xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
-        
+
         # open combo box
         self.openComboBox = QComboBox()
-        self.openComboBox.addItem("gcm.db")
+        self.openComboBox.addItem("wickr.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
 
-        # combo box gcm
-        self.gcmComboBox = QComboBox()
-        self.gcmComboBox.addItem("chatting")
-        self.gcmComboBox.addItem("chatRoomList")
-        self.gcmComboBox.addItem("contacts")
-        self.gcmComboBox.setFixedWidth(100)
-        self.gcmComboBox.activated.connect(self.gcmComboEvent)
+        # combo box wickr
+        self.wickrComboBox = QComboBox()
+        self.wickrComboBox.addItem("Wickr_Message")
+        self.wickrComboBox.addItem("Wickr_User")
+        self.wickrComboBox.setFixedWidth(100)
+        self.wickrComboBox.activated.connect(self.wickrComboEvent)
+
+        self.password = QLabel()
+        self.passerror = QLabel()
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
@@ -84,10 +84,12 @@ class TongTongScreen(QDialog):
         hbox1.addWidget(self.searchButton)
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
-        hbox2.addWidget(self.gcmComboBox)
+        hbox2.addWidget(self.wickrComboBox)
+        hbox2.addStretch(1)
+        hbox2.addWidget(self.passerror)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
-        
+
         layout = QVBoxLayout()
         layout.addLayout(hbox1)
         layout.addLayout(hbox2)
@@ -96,6 +98,17 @@ class TongTongScreen(QDialog):
         self.setLayout(layout)
         self.center()
         self.show()
+
+        self.showDialog()
+        
+    def showDialog(self):
+        text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :')
+        
+        if ok:
+            self.password.setText(str(text))
+            self.wickrData()  # 미리 Wickr 데이터 모두 가져오기
+        else:
+            self.passerror.setText('데이터를 가져올 수 없습니다.')
 
     def showAppWindow(self):
         self.close()
@@ -107,16 +120,16 @@ class TongTongScreen(QDialog):
         grid = QGridLayout()
         findDialog.setLayout(grid)
         findLabel = QLabel("Search...", findDialog)
-        grid.addWidget(findLabel,1,0)
+        grid.addWidget(findLabel, 1, 0)
         self.findField = QLineEdit(findDialog)
-        grid.addWidget(self.findField,1,1)
+        grid.addWidget(self.findField, 1, 1)
         findButton = QPushButton("Find", findDialog)
         findButton.clicked.connect(self.search_items)
-        grid.addWidget(findButton,2,1)
+        grid.addWidget(findButton, 2, 1)
         findDialog.setWindowTitle("Search items")
         findDialog.exec_()
         self.on_off = 0
-    
+
     # search box
     def search_items(self):
 
@@ -133,7 +146,7 @@ class TongTongScreen(QDialog):
         if self.on_off == 0:
             text = self.searchBox.text()
             selected_items = self.tableWidget.findItems(self.searchBox.text(), QtCore.Qt.MatchContains)
-        elif self.on_off == 1:
+        else:
             text = self.findField.text()
             selected_items = self.tableWidget.findItems(self.findField.text(), QtCore.Qt.MatchContains)
 
@@ -159,32 +172,34 @@ class TongTongScreen(QDialog):
             reset(self, allitems)
             print("ff None")
 
-
     # table combo select
-    def gcmComboEvent(self):
-        if self.gcmComboBox.currentText() == 'chatting':
-            colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
-        elif self.gcmComboBox.currentText() == 'chatRoomList':
-            colname, rowlist = self.gcmColnames[1], self.gcmRowlists[1]
-        elif self.gcmComboBox.currentText() == 'contacts':
-            colname, rowlist = self.gcmColnames[2], self.gcmRowlists[2]
+    def wickrComboEvent(self):
+        if self.wickrComboBox.currentText() == 'Wickr_Message':
+            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+        elif self.wickrComboBox.currentText() == 'Wickr_User':
+            colname, rowlist = self.wickrColnames[1], self.wickrRowlists[1]
 
         self.showTable(colname, rowlist)
 
-    def TongTongData(self):
-        self.gcmColnames, self.gcmRowlists = tongtong_gcmDB(self.path)
-        colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
-        self.f_name = "gcm_db"
-        self.showTable(colname, rowlist)
+    def wickrData(self):
+        #password = 'k2185717'
+        try:
+            self.wickrColnames, self.wickrRowlists = wickrDB(self.path, self.password.text())
+            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+            self.f_name = "user_db"
+            self.showTable(colname, rowlist)
+            self.passerror.hide()
+        except:
+            self.passerror.setText('비밀번호가 틀렸습니다.')
+            self.showDialog()
 
     # DB 버튼 클릭 시
     def DBClicked(self):
-        
-        if self.openComboBox.currentText() == 'gcm.db':
-            self.userComboBox.show()
-            self.userComboBox.setCurrentIndex(0)
-            colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
-            self.f_name = "gcm_db"
+
+        if self.openComboBox.currentText() == 'wickr.db':
+            self.wickrComboBox.setCurrentIndex(0)
+            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+            self.f_name = "wickr_db"
 
         self.showTable(colname, rowlist)
 
@@ -193,43 +208,51 @@ class TongTongScreen(QDialog):
         # 정렬 계속 on 시켜 놓으면 다른 테이블 클릭 시 data 안보이는 현상 발생
         self.tableWidget.setSortingEnabled(True)
         self.tableWidget.setSortingEnabled(False)
-        
+
     def showTable(self, colname, rowlist):
         self.tableWidget.clear()
-        
-        self.tableWidget.setColumnCount(len(colname)-1) # col 개수 지정
-        self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
-        
-        self.tableWidget.setHorizontalHeaderLabels(colname) # 열 제목 지정
+
+        self.tableWidget.setColumnCount(len(colname))  # col 개수 지정
+        self.tableWidget.setRowCount(len(rowlist))  # row 개수 지정
+
+        self.tableWidget.setHorizontalHeaderLabels(colname)  # 열 제목 지정
         self.tableHeader = self.tableWidget.horizontalHeader()
         self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
-        
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
-        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # 표 수정 못하도록
+
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # 표 너비 지정
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
         
         media = -1
         for m in range(len(colname)):
-            if list(colname)[m] == '사진':
+            if list(colname)[m] == '미디어':
                 media = m
-            if list(colname)[m] == '비디오':
-                video = m
+            elif list(colname)[m] == '타입':
+                types = m
+                
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                if j == media: # 사진 or 비디오
-                    mpath = rowlist[i][j]
-                    vpath = rowlist[i][video]
-                    if rowlist[i][video] != '' and rowlist[i][video] != None: # 사진o 비디오o
-                        if mpath == '': # 사진x 비디오o
-                            mpath = 'image/audio.png' 
-                            vpath = vpath.replace('TongVideo','TongAudio')
-                        self.btn1 = Button(QPixmap(mpath), 30, self.videoWindow)
-                        self.btn1.setText(vpath)
-                        self.tableWidget.setCellWidget(i,j,self.btn1)
-                    elif mpath != '': # 사진o 비디오x
+                if j == media:
+                    tp = rowlist[i][types][:5]
+                    if tp == 'image': # 사진
+                        if os.path.isfile(self.path+'files/dec/'+rowlist[i][j]) == False: #원본파일 없을 경우
+                            mpath = 'image/noimage.png'
+                        else: # 원본 파일 있는 경우
+                            mpath = 'image/image.png'
                         self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
                         self.btn1.setText(rowlist[i][j])
+                        self.btn1.setCursor(QCursor(Qt.PointingHandCursor))
                         self.tableWidget.setCellWidget(i,j,self.btn1)
+
+                    elif tp == 'video': # 비디오
+                        if os.path.isfile(self.path+'files/dec/'+rowlist[i][j]) == False: #원본파일 없을 경우
+                            mpath = 'image/noimage.png'
+                        else: # 원본 파일 있는 경우
+                            mpath = 'image/video.png'
+                        self.btn2 = Button(QPixmap(mpath), 30, self.videoWindow)
+                        self.btn2.setText(rowlist[i][j])
+                        self.btn2.setCursor(QCursor(Qt.PointingHandCursor))
+                        self.tableWidget.setCellWidget(i,j,self.btn2)
                 else: # 텍스트
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
@@ -241,12 +264,14 @@ class TongTongScreen(QDialog):
 
     def imageWindow(self):
         file = self.sender().text()
-        image(file)
-        
+        mediaPath = self.path+'files/dec/'+file
+        image(mediaPath)
+
     def videoWindow(self):
         file = self.sender().text()
-        video(file)
-
+        mediaPath = self.path+'files/dec/'+file
+        video(mediaPath)
+    
     def center(self):
         frame_info = self.frameGeometry()
         display_center = QDesktopWidget().availableGeometry().center()
@@ -258,20 +283,20 @@ class TongTongScreen(QDialog):
         if self.f_name == '':
             return
 
-        #create Excel    
+        # create Excel
         wb = openpyxl.Workbook()
         sheet = wb.active
-        sheet.title = "TongTong"
+        sheet.title = "Wickr"
         col_excel = list(self.colname)[0:5]
-        
+
         for x in range(1, len(col_excel) + 1):
-            sheet.cell(row = 1, column = x).value = col_excel[x - 1]
-            
+            sheet.cell(row=1, column=x).value = col_excel[x - 1]
+
         for x in range(0, len(self.rowlist)):
             for y in range(1, len(self.rowlist[x]) + 1):
-                sheet.cell(row = x + 2, column = y).value = str(self.rowlist[x][y - 1])
-                
-        #resize the cell
+                sheet.cell(row=x + 2, column=y).value = str(self.rowlist[x][y - 1])
+
+        # resize the cell
         for x in range(0, len(self.colname)):
             MAX = 1
             for y in range(1, len(self.rowlist) + 1):
@@ -281,8 +306,8 @@ class TongTongScreen(QDialog):
                     sheet.column_dimensions[chr(65 + x)].width = MAX + 5
                 sheet.row_dimensions[y].height = 20
         sheet.row_dimensions[y + 1].height = 20
-        
-        #change the font 
+
+        # change the font
         for x in range(1, len(self.colname) + 1):
             cell = sheet[chr(64 + x) + "1"]
             cell.font = Font(size=11, bold=True)
@@ -294,13 +319,15 @@ class TongTongScreen(QDialog):
                 cell = sheet[chr(65 + y) + str(x + 2)]
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.border = Border(right=Side(border_style="thick"))
- 
-        wb.save("TongTong_" + self.f_name + ".xlsx")
+
+        wb.save("Wickr_" + self.f_name + ".xlsx")
+
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
-    app.setStyle(QStyleFactory.create('Fusion'))
+    app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
     phoneNo = 'SM-G955N'
-    ui = TongTongScreen(phoneNo)
+    ui = WickrScreen(phoneNo)
     sys.exit(app.exec_())

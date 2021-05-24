@@ -7,6 +7,7 @@ import subprocess
 from appWindow import appScreen
 
 class deviceScreen(QWidget):
+    
     def __init__(self):
         super().__init__()
         self.setupUi()
@@ -45,10 +46,14 @@ class deviceScreen(QWidget):
 
         # button
         self.ll = QLabel('연결 후 next를 누르세요')
-
         self.connectButton = QPushButton('next')
         self.connectButton.clicked.connect(self.checkDevice)
 
+        font.setBold(False)
+        font.setPointSize(font.pointSize() - 5)
+        self.ll.setFont(font)
+        self.connectButton.setFont(font)
+        
         hbox3 = QHBoxLayout()
         hbox3.addWidget(self.ll)
         hbox3.addStretch(1)
@@ -87,5 +92,6 @@ class deviceScreen(QWidget):
 if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create('Fusion'))
     ui = deviceScreen()
     sys.exit(app.exec_())
