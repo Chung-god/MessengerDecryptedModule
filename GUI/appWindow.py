@@ -190,7 +190,9 @@ class appScreen(QWidget):
             if reply == QMessageBox.No:
                 return 'back'
             elif reply == QMessageBox.Yes:
-                os.makedirs(f'C:/AppData/{self.phoneNo}')
+                if not os.path.exists(f'C:/AppData/{self.phoneNo}'):
+                    os.makedirs(f'C:/AppData/{self.phoneNo}')
+                
             return 'Yes'
 
 

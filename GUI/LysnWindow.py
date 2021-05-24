@@ -154,9 +154,12 @@ class LysnScreen(QDialog):
             if item in selected_items:
                 item.setBackground(QBrush(Qt.black))
                 item.setForeground(QBrush(Qt.white))
-                item.setFont(QFont("Helvetica", 11, QFont.Bold))
+                item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "":
+        if self.searchBox.text() == "" and self.findField.text() != "":
+            pass
+
+        elif self.searchBox.text() == "":
             reset(self, allitems)
             print("sb None")
         elif self.on_off == 1 and self.findField.text() == "":
@@ -253,11 +256,14 @@ class LysnScreen(QDialog):
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                if j == media:
+                item2 = QTableWidgetItem(rowlist[i][j])
+                item2.setTextAlignment(Qt.AlignHCenter)
+                if j == media and isinstance(rowlist[i][j], str) == False:
                     item = self.getImageLabel(rowlist[i][j])
                     self.tableWidget.setCellWidget(i, j, item)
                 else:
                     self.tableWidget.setItem(i, j, QTableWidgetItem(str(rowlist[i][j])))
+
         self.tableWidget.verticalHeader().setDefaultSectionSize(80)
         self.colname = colname
         self.rowlist = rowlist
@@ -325,6 +331,6 @@ if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    phoneNo = 'SM-G955N'
+    phoneNo = 'SM-G930K'
     ui = LysnScreen(phoneNo)
     sys.exit(app.exec_())

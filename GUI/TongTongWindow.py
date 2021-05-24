@@ -41,6 +41,7 @@ class TongTongScreen(QDialog):
         self.shortcut = QShortcut(QKeySequence('Ctrl+f'), self)
         self.shortcut.activated.connect(self.handleFind)
 
+
         # back/search button
         self.backButton = Button(QPixmap("image/back.png"), 35, self.showAppWindow)
         self.searchButton = Button(QPixmap("image/search.png"), 35, self.search_items)
@@ -70,6 +71,7 @@ class TongTongScreen(QDialog):
         # combo box gcm
         self.gcmComboBox = QComboBox()
         self.gcmComboBox.addItem("chatting")
+        self.gcmComboBox.addItem("chatRoomList")
         self.gcmComboBox.addItem("contacts")
         self.gcmComboBox.setFixedWidth(100)
         self.gcmComboBox.activated.connect(self.gcmComboEvent)
@@ -116,49 +118,56 @@ class TongTongScreen(QDialog):
     
     # search box
     def search_items(self):
-        
-        #rest font
+
+        # rest font
         def reset(self, items):
             for item in items:
-                item.setBackground(QBrush(Qt.white))
-                item.setForeground(QBrush(Qt.black))
-                item.setFont(QFont())
-        
+                if item == None:
+                    pass
+                else:
+                    item.setBackground(QBrush(Qt.white))
+                    item.setForeground(QBrush(Qt.black))
+                    item.setFont(QFont())
+
         if self.on_off == 0:
             text = self.searchBox.text()
             selected_items = self.tableWidget.findItems(self.searchBox.text(), QtCore.Qt.MatchContains)
-        else:
+        elif self.on_off == 1:
             text = self.findField.text()
             selected_items = self.tableWidget.findItems(self.findField.text(), QtCore.Qt.MatchContains)
-            
+
         allitems = self.tableWidget.findItems("", QtCore.Qt.MatchContains)
-        
+
         # reset
         reset(self, allitems)
-             
+
         # highlight the search results
         for item in allitems:
-            if item in selected_items:   
+            if item in selected_items:
                 item.setBackground(QBrush(Qt.black))
                 item.setForeground(QBrush(Qt.white))
-                item.setFont(QFont("Helvetica", 10, QFont.Bold))
-               
-        if self.searchBox.text() == "":
-            reset(self, allitems)
+                item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        elif self.on_off == 1 and self.findField.text() =="":
-            reset(self, allitems)
+        if self.searchBox.text() == "" and self.findField.text() != "":
+            pass
 
+        elif self.searchBox.text() == "":
+            reset(self, allitems)
+            print("sb None")
+        elif self.on_off == 1 and self.findField.text() == "":
+            reset(self, allitems)
+            print("ff None")
 
     # table combo select
     def gcmComboEvent(self):
-        if self.userComboBox.currentText() == 'chatting':
-            colname, rowlist = self.gcmColnames[0], self.userRowlists[0]
-        elif self.userComboBox.currentText() == 'contacts':
-            colname, rowlist = self.gcmColnames[1], self.userRowlists[1]
+        if self.gcmComboBox.currentText() == 'chatting':
+            colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
+        elif self.gcmComboBox.currentText() == 'chatRoomList':
+            colname, rowlist = self.gcmColnames[1], self.gcmRowlists[1]
+        elif self.gcmComboBox.currentText() == 'contacts':
+            colname, rowlist = self.gcmColnames[2], self.gcmRowlists[2]
 
         self.showTable(colname, rowlist)
-
 
     def TongTongData(self):
         self.gcmColnames, self.gcmRowlists = tongtong_gcmDB(self.path)
@@ -172,7 +181,7 @@ class TongTongScreen(QDialog):
         if self.openComboBox.currentText() == 'gcm.db':
             self.userComboBox.show()
             self.userComboBox.setCurrentIndex(0)
-            colname, rowlist = self.gcmColnames[0], self.userRowlists[0]
+            colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
             self.f_name = "gcm_db"
 
         self.showTable(colname, rowlist)
@@ -198,17 +207,18 @@ class TongTongScreen(QDialog):
         
         media = -1
         for m in range(len(colname)):
-            if list(colname)[m] == '파일':
+            if list(colname)[m] == '사진':
                 media = m
 
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                if j == media:
+                if j == media and rowlist[i][j] != '':
                     item = self.getImageLabel(rowlist[i][j])
                     self.tableWidget.setCellWidget(i, j, item)
                 else:
                     self.tableWidget.setItem(i, j, QTableWidgetItem(str(rowlist[i][j])))
+                    
         self.tableWidget.verticalHeader().setDefaultSectionSize(80)
         self.colname = colname
         self.rowlist = rowlist
@@ -275,5 +285,5 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     phoneNo = 'SM-G955N'
-    ui = LysnScreen(phoneNo)
+    ui = TongTongScreen(phoneNo)
     sys.exit(app.exec_())
