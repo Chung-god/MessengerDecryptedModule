@@ -25,7 +25,7 @@ class LysnScreen(QDialog):
         self.path = f'C:/AppData/{self.phoneNo}/Lysn/'
         self.lysnData()  # 미리 Lysn 데이터 모두 가져오기
         self.setupUI()
-    
+
     def setupUI(self):
 
         # Window Backgrond
@@ -55,6 +55,7 @@ class LysnScreen(QDialog):
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
+        self.searchBox.returnPressed.connect(self.search_items)
 
         # combo box talk
         self.talkComboBox = QComboBox()
@@ -67,10 +68,11 @@ class LysnScreen(QDialog):
         self.talkComboBox.hide()
 
         # excel button
-        self.excelSaveButton = QPushButton()
+        self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
-        self.excelSaveButton.setText('xls')
+        self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
+
 
         # open combo box
         self.openComboBox = QComboBox()
@@ -86,6 +88,9 @@ class LysnScreen(QDialog):
         self.userComboBox.setFixedWidth(100)
         self.userComboBox.activated.connect(self.userComboEvent)
 
+        # close Button
+        # btn.clicked.connect(self.close)
+
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
         hbox1.addStretch(1)
@@ -97,6 +102,7 @@ class LysnScreen(QDialog):
         hbox2.addWidget(self.talkComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
+
 
         layout = QVBoxLayout()
         layout.addLayout(hbox1)
@@ -159,7 +165,8 @@ class LysnScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.findField.text() != "":
+        if self.searchBox.text() == "" and self.on_off == 0:
+            reset(self, allitems)
             pass
 
         elif self.searchBox.text() == "":

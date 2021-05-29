@@ -18,6 +18,8 @@ class deviceScreen(QWidget):
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
         self.setContentsMargins(100,100,100,100)
+        icon = QIcon('image/kshjr.png')
+        self.setWindowIcon(icon)
 
         # Window Backgrond
         palette = QPalette()

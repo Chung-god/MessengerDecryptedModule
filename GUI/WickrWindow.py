@@ -54,11 +54,12 @@ class WickrScreen(QDialog):
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
+        self.searchBox.returnPressed.connect(self.search_items)
 
         # excel button
-        self.excelSaveButton = QPushButton()
+        self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
-        self.excelSaveButton.setText('xls')
+        self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
 
         # open combo box
@@ -162,7 +163,8 @@ class WickrScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.findField.text() != "":
+        if self.searchBox.text() == "" and self.on_off == 0:
+            reset(self, allitems)
             pass
 
         elif self.searchBox.text() == "":

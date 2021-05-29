@@ -12,6 +12,7 @@ from button import Button
 from videoWindow import video, image
 
 import os
+
 class TongTongScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
@@ -56,11 +57,12 @@ class TongTongScreen(QDialog):
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
+        self.searchBox.returnPressed.connect(self.search_items)
 
         # excel button
-        self.excelSaveButton = QPushButton()
+        self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
-        self.excelSaveButton.setText('xls')
+        self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
         
         # open combo box
@@ -145,11 +147,15 @@ class TongTongScreen(QDialog):
         # highlight the search results
         for item in allitems:
             if item in selected_items:
-                item.setBackground(QBrush(Qt.black))
-                item.setForeground(QBrush(Qt.white))
-                item.setFont(QFont("Helvetica", 9, QFont.Bold))
+                if item == None:
+                    pass
+                else:
+                    item.setBackground(QBrush(Qt.black))
+                    item.setForeground(QBrush(Qt.white))
+                    item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.findField.text() != "":
+        if self.searchBox.text() == "" and self.on_off == 0:
+            reset(self, allitems)
             pass
 
         elif self.searchBox.text() == "":
@@ -203,7 +209,7 @@ class TongTongScreen(QDialog):
         self.tableWidget.setHorizontalHeaderLabels(colname) # 열 제목 지정
         self.tableHeader = self.tableWidget.horizontalHeader()
         self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
-        
+
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # 표 수정 못하도록
         

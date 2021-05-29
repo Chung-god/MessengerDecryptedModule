@@ -22,6 +22,7 @@ class appScreen(QWidget):
 
     def setupUi(self):
         # Window Setting
+        re1 = 1
         self.setGeometry(500, 70, 800, 600)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
@@ -150,22 +151,32 @@ class appScreen(QWidget):
     # LysnWindow로 이동
     def showLysnWindow(self):
         reply = self.checkData('Lysn')
+
         if reply == 'Yes':
             LysnData(self.phoneNo)  # Lysn 데이터 추출
-        elif reply == 'back':
+            self.hide()  # hide main window
+            self.lysnWindow = LysnScreen(self.phoneNo)
+            self.lysnWindow.exec()
+            self.show()
+        elif reply == 'Already_Exits_No':
+            self.hide()  # hide main window
+            self.lysnWindow = LysnScreen(self.phoneNo)
+            self.lysnWindow.exec()
+            self.show()
+        elif reply == 'back': # 동작 안함
             return
 
-        self.hide()  # hide main window
-        self.lysnWindow = LysnScreen(self.phoneNo)
-        self.lysnWindow.exec()
-        self.show()
+        #self.hide()  # hide main window
+        #self.lysnWindow = LysnScreen(self.phoneNo)
+        #self.lysnWindow.exec()
+        #self.show()
 
     # TongTongWindow로 이동
     def showTongTongWindow(self):
         reply = self.checkData('TongTong')
         if reply == 'Yes':
             TongTongData(self.phoneNo)  # Lysn 데이터 추출
-        elif reply == 'back':
+        elif reply == 'back': # 동작 안함
             return
 
         self.hide()  # hide main window
@@ -187,18 +198,26 @@ class appScreen(QWidget):
         self.show()
 
     def checkData(self, app):
+
         if os.path.exists(f'C:/AppData/{self.phoneNo}/{app}'):
             reply = QMessageBox.question(self, 'Message', f'이미 {app} 데이터가 존재합니다.\n{app} 데이터를 다시 추출하시겠습니까?',
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
             if reply == QMessageBox.No:
-                return 'No'
+                return 'Already_Exits_No'
+            elif reply == QMessageBox.Close:
+                print("close")
+                return 'back'
             elif reply == QMessageBox.Yes:
                 try:
                     shutil.rmtree(f'C:/AppData/{self.phoneNo}/{app}/')
                 except:
                     print('데이터 파일이 열려있습니다. 닫고 다시 실행해주세요.')
                 return 'Yes'
-            return 'No'
+            return 'back'
+
+
+
         else:
             reply = QMessageBox.question(self, 'Message', f'{app} 데이터를 추출하시겠습니까?',
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
