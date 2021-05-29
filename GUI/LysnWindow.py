@@ -133,9 +133,12 @@ class LysnScreen(QDialog):
         # rest font
         def reset(self, items):
             for item in items:
-                item.setBackground(QBrush(Qt.white))
-                item.setForeground(QBrush(Qt.black))
-                item.setFont(QFont())
+                if item == None:
+                    pass
+                else:
+                    item.setBackground(QBrush(Qt.white))
+                    item.setForeground(QBrush(Qt.black))
+                    item.setFont(QFont())
 
         if self.on_off == 0:
             text = self.searchBox.text()
