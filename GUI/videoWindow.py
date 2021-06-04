@@ -24,7 +24,7 @@ def video(videoName):
         cv2.moveWindow('video', 400,100)
         cv2.imshow('video', frame)
         
-        if cv2.waitKey(int(1000/30.0)) & 0xFF == ord('q'):
+        if cv2.waitKey(30) & 0xFF == ord('q'):
             break
         if val != 'eof' and audio_frame is not None:
             img, t = audio_frame

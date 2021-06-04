@@ -12,10 +12,12 @@ from button import Button
 from videoWindow import video, image
 
 import os
+
 class TongTongScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
         # 초기화
+        self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint )
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
         self.gcmColnames, self.gcmRowlists = [], []
@@ -24,6 +26,7 @@ class TongTongScreen(QDialog):
         self.path = f'C:/AppData/{self.phoneNo}/TongTong/'
         self.TongTongData() # 미리 TongTong 데이터 모두 가져오기
         self.setupUI()
+        
 
     def setupUI(self):
         
@@ -53,29 +56,43 @@ class TongTongScreen(QDialog):
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
 
+        self.backButton.setToolTip('뒤로가기')
+        self.searchButton.setToolTip('찾기 버튼\n단축키 : ctrl + f')
+
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
+        self.searchBox.returnPressed.connect(self.search_items)
 
         # excel button
-        self.excelSaveButton = QPushButton()
+        self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
-        self.excelSaveButton.setText('xls')
+        self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
-        
-        # open combo box
-        self.openComboBox = QComboBox()
-        self.openComboBox.addItem("gcm.db")
-        self.openComboBox.setFixedWidth(100)
-        self.openComboBox.activated.connect(self.DBClicked)
+        self.excelSaveButton.setToolTip('현재 보고있는 표를 엑셀로 저장하는 버튼')
 
         # combo box gcm
         self.gcmComboBox = QComboBox()
         self.gcmComboBox.addItem("chatting")
         self.gcmComboBox.addItem("chatRoomList")
-        self.gcmComboBox.addItem("contacts")
+        self.gcmComboBox.addItem("friendsList")
         self.gcmComboBox.setFixedWidth(100)
         self.gcmComboBox.activated.connect(self.gcmComboEvent)
+        self.gcmComboBox.setToolTip('gcm.db의 tables')
+
+        # combo chat room
+        self.chatRoomComboBox = QComboBox()
+        for i in range(self.chatRoomLen):
+            self.chatRoomComboBox.addItem(self.chatRoomName[i])
+        self.chatRoomComboBox.setFixedWidth(100)
+        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
+        self.chatRoomComboBox.setToolTip('Chat Room')
+        
+        # open combo box
+        self.openComboBox = QComboBox()
+        self.openComboBox.addItem("gcm.db")
+        self.openComboBox.setFixedWidth(100)
+        self.openComboBox.setToolTip('TongTong 데이터베이스')
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
@@ -85,6 +102,7 @@ class TongTongScreen(QDialog):
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.gcmComboBox)
+        hbox2.addWidget(self.chatRoomComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
         
@@ -145,11 +163,15 @@ class TongTongScreen(QDialog):
         # highlight the search results
         for item in allitems:
             if item in selected_items:
-                item.setBackground(QBrush(Qt.black))
-                item.setForeground(QBrush(Qt.white))
-                item.setFont(QFont("Helvetica", 9, QFont.Bold))
+                if item == None:
+                    pass
+                else:
+                    item.setBackground(QBrush(Qt.black))
+                    item.setForeground(QBrush(Qt.white))
+                    item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.findField.text() != "":
+        if self.searchBox.text() == "" and self.on_off == 0:
+            reset(self, allitems)
             pass
 
         elif self.searchBox.text() == "":
@@ -163,31 +185,59 @@ class TongTongScreen(QDialog):
     # table combo select
     def gcmComboEvent(self):
         if self.gcmComboBox.currentText() == 'chatting':
-            colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
+            self.chatRoomComboBox.show()
+            colname, rowlist = self.gcmColnames[0], self.chatrowlists[0]
         elif self.gcmComboBox.currentText() == 'chatRoomList':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.gcmColnames[1], self.gcmRowlists[1]
-        elif self.gcmComboBox.currentText() == 'contacts':
+        elif self.gcmComboBox.currentText() == 'friendsList':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.gcmColnames[2], self.gcmRowlists[2]
 
+        self.showTable(colname, rowlist)
+    
+    def chatroom(self):
+        import copy
+
+        self.gcmColnames[0] = list(self.gcmColnames[0])
+        self.gcmColnames[0][3] = '받는사람'
+        self.chatrowlists = []
+        talkrowlist = self.gcmRowlists[0]
+
+        for k in range(self.chatRoomLen):
+            crowlist = []
+            for i in range(len(self.gcmRowlists[0])):
+                people = copy.deepcopy(self.chatRoomPeople[k])
+                if talkrowlist[i][3] == self.chatRoomNum[k]:
+                    if talkrowlist[i][2] in people:
+                        people.remove(talkrowlist[i][2])
+                    people=', '.join(people)
+                    talkrowlist[i][3] = people
+                    crowlist.append(talkrowlist[i])
+            
+            self.chatrowlists.append(crowlist)
+    
+    def chatRoomComboEvent(self):
+        colname = self.gcmColnames[0]
+        for k in range(self.chatRoomLen):
+            if self.chatRoomComboBox.currentText() == self.chatRoomName[k]:
+                rowlist = self.chatrowlists[k]
+        
         self.showTable(colname, rowlist)
 
     def TongTongData(self):
         self.gcmColnames, self.gcmRowlists = tongtong_gcmDB(self.path)
-        colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
+        self.chatRoomLen = len(self.gcmRowlists[1])
+        self.chatRoomNum = [self.gcmRowlists[1][i][0] for i in range(self.chatRoomLen)]
+        self.chatRoomName = [self.gcmRowlists[1][i][1] for i in range(self.chatRoomLen)]
+        self.chatRoomPeople = [self.gcmRowlists[1][i][4].split(', ') for i in range(self.chatRoomLen)]
+
+        self.chatroom()
+        
+        colname, rowlist = self.gcmColnames[0], self.chatrowlists[0]
         self.f_name = "gcm_db"
         self.showTable(colname, rowlist)
-
-    # DB 버튼 클릭 시
-    def DBClicked(self):
-        
-        if self.openComboBox.currentText() == 'gcm.db':
-            self.userComboBox.show()
-            self.userComboBox.setCurrentIndex(0)
-            colname, rowlist = self.gcmColnames[0], self.gcmRowlists[0]
-            self.f_name = "gcm_db"
-
-        self.showTable(colname, rowlist)
-
+    
     def tableHeaderClicked(self):
         # 헤더 click 시에만 정렬하고 다시 정렬기능 off
         # 정렬 계속 on 시켜 놓으면 다른 테이블 클릭 시 data 안보이는 현상 발생
@@ -196,23 +246,28 @@ class TongTongScreen(QDialog):
         
     def showTable(self, colname, rowlist):
         self.tableWidget.clear()
-        
-        self.tableWidget.setColumnCount(len(colname)-1) # col 개수 지정
-        self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
-        
-        self.tableWidget.setHorizontalHeaderLabels(colname) # 열 제목 지정
-        self.tableHeader = self.tableWidget.horizontalHeader()
-        self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
-        
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
-        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # 표 수정 못하도록
-        
+
         media = -1
         for m in range(len(colname)):
             if list(colname)[m] == '사진':
                 media = m
             if list(colname)[m] == '비디오':
                 video = m
+
+        # col 개수 지정
+        if media != -1:
+            self.tableWidget.setColumnCount(len(colname)-1)
+        else:
+            self.tableWidget.setColumnCount(len(colname))
+        self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
+        
+        self.tableWidget.setHorizontalHeaderLabels(colname) # 열 제목 지정
+        self.tableHeader = self.tableWidget.horizontalHeader()
+        self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
+
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # 표 너비 지정
+        self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers) # 표 수정 못하도록
+        
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
@@ -234,6 +289,7 @@ class TongTongScreen(QDialog):
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
                     self.tableWidget.setItem(i, j, item)
+        
 
         self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname

@@ -50,7 +50,7 @@ class appScreen(QWidget):
         self.phonePhoto.setStyleSheet('background:transparent;')
         self.phonePhoto.setStyleSheet('background:rgb(242, 242, 242);')
 
-        # 정보
+        # 핸드폰 정보
         serialNo, productNo, androidVersion = self.deviceInformation()
         self.text2 = QLabel(f"시리얼 넘버 : {serialNo}")
         self.text3 = QLabel(f"제품 넘버 : {productNo}")
@@ -72,13 +72,14 @@ class appScreen(QWidget):
         v1.addWidget(self.text3)
         v1.addWidget(self.text4)
         v1.setSpacing(0)
-        v1.setContentsMargins(10, 30, 10, 30)
+        v1.setContentsMargins(0, 30, 0, 30)
 
         layout1 = QHBoxLayout()
+        
         layout1.addWidget(self.phonePhoto)
         layout1.addLayout(v1)
         layout1.addStretch(1)
-
+        
         # === APP
         # TEXT
         self.label = QLabel("DB 추출 작업을 진행할 메신저를 선택해주세요")
@@ -120,6 +121,7 @@ class appScreen(QWidget):
         layout.addLayout(layout1)
         layout.addLayout(layout2)
         layout.setSpacing(50)
+
         self.setLayout(layout)
         self.center()
         self.show()
@@ -150,22 +152,32 @@ class appScreen(QWidget):
     # LysnWindow로 이동
     def showLysnWindow(self):
         reply = self.checkData('Lysn')
+
         if reply == 'Yes':
             LysnData(self.phoneNo)  # Lysn 데이터 추출
-        elif reply == 'back':
+            self.hide()  # hide main window
+            self.lysnWindow = LysnScreen(self.phoneNo)
+            self.lysnWindow.exec()
+            self.show()
+        elif reply == 'Already_Exits_No':
+            self.hide()  # hide main window
+            self.lysnWindow = LysnScreen(self.phoneNo)
+            self.lysnWindow.exec()
+            self.show()
+        elif reply == 'back': # 동작 안함
             return
 
-        self.hide()  # hide main window
-        self.lysnWindow = LysnScreen(self.phoneNo)
-        self.lysnWindow.exec()
-        self.show()
+        #self.hide()  # hide main window
+        #self.lysnWindow = LysnScreen(self.phoneNo)
+        #self.lysnWindow.exec()
+        #self.show()
 
     # TongTongWindow로 이동
     def showTongTongWindow(self):
         reply = self.checkData('TongTong')
         if reply == 'Yes':
             TongTongData(self.phoneNo)  # Lysn 데이터 추출
-        elif reply == 'back':
+        elif reply == 'back': # 동작 안함
             return
 
         self.hide()  # hide main window
@@ -187,18 +199,24 @@ class appScreen(QWidget):
         self.show()
 
     def checkData(self, app):
+
         if os.path.exists(f'C:/AppData/{self.phoneNo}/{app}'):
             reply = QMessageBox.question(self, 'Message', f'이미 {app} 데이터가 존재합니다.\n{app} 데이터를 다시 추출하시겠습니까?',
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
             if reply == QMessageBox.No:
-                return 'No'
+                return 'Already_Exits_No'
+            elif reply == QMessageBox.Close:
+                print("close")
+                return 'back'
             elif reply == QMessageBox.Yes:
                 try:
                     shutil.rmtree(f'C:/AppData/{self.phoneNo}/{app}/')
                 except:
                     print('데이터 파일이 열려있습니다. 닫고 다시 실행해주세요.')
                 return 'Yes'
-            return 'No'
+            return 'back'
+
         else:
             reply = QMessageBox.question(self, 'Message', f'{app} 데이터를 추출하시겠습니까?',
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
