@@ -209,16 +209,18 @@ def wickrDB(path, password):
 # Wickr data 변환
 def WickrConversation(row, colname, col_defs, compare, path=None):
     d_row = []
-    flag = 0
-
+    flag, flag2 = 0, 0
+    msg = ''
     for en, kr in colname.items():
         if en != 'type' and en != 'media' and en != 'chatRoom':
             value = row[col_defs[en]]
         # 시간 변환
         if (kr == '시간' or kr == '마지막 활동시간') and value != None:
             value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
+        elif kr == '메시지':
+            msg = value
         elif kr == '보낸사람':
-            a=value.find(b'\x12')
+            a=value.find(b'\x12',2)
             username = value[2:a]
             try:
                 value=username.decode()
@@ -234,24 +236,31 @@ def WickrConversation(row, colname, col_defs, compare, path=None):
                     type = mdkdata[a+2:aa].decode()
                     mdkdata = mdkdata[aa+2:]
                 except: # 동영상
-                    b=mdkdata.find(b'\x0A\x09')
-                    bb=mdkdata.find(b'\x12', b)
-                    type = mdkdata[b+2:bb].decode()
-                    mdkdata = mdkdata[bb+2:]
-                
-                # filename, mdk 구하기
-                s=(mdkdata.find(b'\x18'))
-                c=(mdkdata.find(b'\x2A\x24'))
-                d=(mdkdata.find(b'\x32\x21\x00'))
-                e=(mdkdata.find(b'\x3A\x80\x01'))
+                    try:
+                        b=mdkdata.find(b'\x0A\x09')
+                        bb=mdkdata.find(b'\x12', b)
+                        type = mdkdata[b+2:bb].decode()
+                        mdkdata = mdkdata[bb+2:]
+                    except:
+                        value = 'Wickr'
+                        type = 'etc'
+                        flag=0
+                        flag2 = 1
+                        
+                if flag2 == 0:
+                    # filename, mdk 구하기
+                    s=(mdkdata.find(b'\x18'))
+                    c=(mdkdata.find(b'\x2A\x24'))
+                    d=(mdkdata.find(b'\x32\x21\x00'))
+                    e=(mdkdata.find(b'\x3A\x80\x01'))
 
-                decfilename = (mdkdata[:s]).decode()
-                encfilename=(mdkdata[c+2:d]).decode()
-                mdk=(mdkdata[d+3:e])
+                    decfilename = (mdkdata[:s]).decode()
+                    encfilename=(mdkdata[c+2:d]).decode()
+                    mdk=(mdkdata[d+3:e])
 
-                # 보낸사람 구하기
-                f=value.find(b'\x2A')
-                value = value[2:f].decode()
+                    # 보낸사람 구하기
+                    f=value.find(b'\x2A')
+                    value = value[2:f].decode()
 
         elif en == 'type':
             value = type          
@@ -283,6 +292,9 @@ def WickrConversation(row, colname, col_defs, compare, path=None):
             value = ', '.join(chatnames)
             
         d_row.append(value)
+
+    if msg == None:
+        d_row[1] = d_row[1][:-2]
         
     return d_row
 
@@ -358,30 +370,7 @@ def export(app, cur, table, colname, compare=None, mediaPath=None):
 
     return rowlist
 
-
 if __name__ == '__main__':
-    
-    '''
-    path = "C:/AppData/SM-G955N/Lysn/"
-    android_id = '4b0629381a2249a5'
-    #android_id = '4f77d977f3f1c488' 
-    colnames, rowlists = lysn_userDB(path, android_id)
-    colnames, rowlists = lysn_talkDB(path, android_id,rowlists)
-    
-    print(colnames[0])
-    #print(rowlists[0][4])
-    for row in rowlists[0]:
-        print(row)
-    
-    
-    path = "C:/AppData/SM-G955N/TongTong/"
-    colnames, rowlists = tongtong_gcmDB(path)
-    
-    print(colnames[0])
-    for row in rowlists[0]:
-        print(row)
-    '''
-
     path = "C:/AppData/SM-G955N/KakaoTalk/"
     colnames, rowlists = KaKaoTalk_DB_1(path)
     
