@@ -22,7 +22,6 @@ class appScreen(QWidget):
 
     def setupUi(self):
         # Window Setting
-        re1 = 1
         self.setGeometry(500, 70, 800, 600)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
@@ -51,7 +50,7 @@ class appScreen(QWidget):
         self.phonePhoto.setStyleSheet('background:transparent;')
         self.phonePhoto.setStyleSheet('background:rgb(242, 242, 242);')
 
-        # 정보
+        # 핸드폰 정보
         serialNo, productNo, androidVersion = self.deviceInformation()
         self.text2 = QLabel(f"시리얼 넘버 : {serialNo}")
         self.text3 = QLabel(f"제품 넘버 : {productNo}")
@@ -73,13 +72,14 @@ class appScreen(QWidget):
         v1.addWidget(self.text3)
         v1.addWidget(self.text4)
         v1.setSpacing(0)
-        v1.setContentsMargins(10, 30, 10, 30)
+        v1.setContentsMargins(0, 30, 0, 30)
 
         layout1 = QHBoxLayout()
+        
         layout1.addWidget(self.phonePhoto)
         layout1.addLayout(v1)
         layout1.addStretch(1)
-
+        
         # === APP
         # TEXT
         self.label = QLabel("DB 추출 작업을 진행할 메신저를 선택해주세요")
@@ -121,6 +121,7 @@ class appScreen(QWidget):
         layout.addLayout(layout1)
         layout.addLayout(layout2)
         layout.setSpacing(50)
+
         self.setLayout(layout)
         self.center()
         self.show()
@@ -215,8 +216,6 @@ class appScreen(QWidget):
                     print('데이터 파일이 열려있습니다. 닫고 다시 실행해주세요.')
                 return 'Yes'
             return 'back'
-
-
 
         else:
             reply = QMessageBox.question(self, 'Message', f'{app} 데이터를 추출하시겠습니까?',
