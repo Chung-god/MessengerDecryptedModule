@@ -54,7 +54,7 @@ def lysn_talkDB(path, android_id, rowlist):
 
     # 테이블 추출할 내용 지정
     # chats
-    chatsColname = {'time':'시간', 'sender':'보낸사람', 'type':'타입', 'roomidx':'채팅방 번호', 'text':'메시지', 'url':'파일'}
+    chatsColname = {'time':'시간', 'sender':'보낸사람', 'text':'메시지', 'type':'타입', 'roomidx':'채팅방 번호', 'url':'파일'}
     chatsRowlist = export(app, cur, 'chats', chatsColname, ulist, path) # talk.db에 chats 테이블 내용 추출
     
     # rooms
@@ -112,7 +112,7 @@ def tongtong_gcmDB(path):
     
     # 테이블 추출할 내용 지정
     # chatting
-    chattingColname = {'date' : '시간', 'userId' : '유저 고유 아이디', 'msg' : '메시지', 'name' : '보낸사람', 'thumbnailPath':'사진', 'videoPath':'비디오'}
+    chattingColname = {'date' : '시간', 'name' : '보낸사람',  'msg' : '메시지', 'userId' : '유저 고유 아이디', 'thumbnailPath':'사진', 'videoPath':'비디오'}
     chattingRowlist = export(app, cur, 'chatting', chattingColname, None, path)  # gcm.db에 chatting 테이블 내용 추출
 
     # chatRoomList
@@ -134,12 +134,24 @@ def tongtongConversation(row, colname, col_defs, path):
     d_row = []
     for en, kr in colname.items():
         value = row[col_defs[en]]
+        userId = ''
+        '''
         if en == 'userId':
             userId = row[col_defs[en]]
         elif en == 'msg' and userId != '':
             enc_msg = row[col_defs[en]]
-            value = tong_dec(userId, enc_msg)
             
+            value = tong_dec(userId, enc_msg)
+        '''
+
+        if en == 'userID' and userId != '':
+            userId = row[col_defs[en]]
+        if en == 'msg' and userId != '':
+            enc_msg = row[col_defs[en]]
+            value = tong_dec(userId, enc_msg)
+
+
+
         # 미디어 파일 추출
         elif kr == '사진' and value != '' and value != None:
             s=value.split('/')
