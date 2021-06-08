@@ -165,8 +165,7 @@ class LysnScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.on_off == 0:
-            reset(self, allitems)
+        if self.searchBox.text() == "" and self.findField.text() != "":
             pass
 
         elif self.searchBox.text() == "":

@@ -5,13 +5,12 @@ from PyQt5.QtCore import *
 
 from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
-from xml.etree.ElementTree import parse
+
 from exportDB import purple_DB
 from button import Button
 from videoWindow import video, image
 
 import os
-
 
 class PurpleScreen(QDialog):
     def __init__(self, phoneNo):
@@ -92,11 +91,9 @@ class PurpleScreen(QDialog):
         hbox1.addWidget(self.searchButton)
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
-
         hbox2.addWidget(self.communityComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
-
         layout = QVBoxLayout()
         layout.addLayout(hbox1)
         layout.addLayout(hbox2)
@@ -158,8 +155,7 @@ class PurpleScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.on_off == 0:
-            reset(self, allitems)
+        if self.searchBox.text() == "" and self.findField.text() != "":
             pass
 
         elif self.searchBox.text() == "":
@@ -286,7 +282,7 @@ class PurpleScreen(QDialog):
         # create Excel
         wb = openpyxl.Workbook()
         sheet = wb.active
-        sheet.title = "Lysn"
+        sheet.title = "Purple"
         col_excel = list(self.colname)[0:5]
 
         for x in range(1, len(col_excel) + 1):
@@ -320,7 +316,7 @@ class PurpleScreen(QDialog):
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.border = Border(right=Side(border_style="thick"))
 
-        wb.save("Lysn_" + self.f_name + ".xlsx")
+        wb.save("Purple_" + self.f_name + ".xlsx")
 
 
 if __name__ == "__main__":

@@ -103,7 +103,7 @@ class WickrScreen(QDialog):
         self.showDialog()
         
     def showDialog(self):
-        text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :')
+        text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :', QLineEdit.Password)
         
         if ok:
             self.password.setText(str(text))
@@ -163,8 +163,7 @@ class WickrScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.on_off == 0:
-            reset(self, allitems)
+        if self.searchBox.text() == "" and self.findField.text() != "":
             pass
 
         elif self.searchBox.text() == "":

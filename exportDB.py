@@ -7,6 +7,7 @@ from lysn_key import userDB_key, talkDB_key
 from tong_decrypt import tong_dec
 from wickr_decrypt import wickrDB_key, wickr_media
 from purple_decrypt import purple_dec
+from kakao_decrypt import *
 
 # lysn user.db 내용 추출 
 def lysn_userDB(path, android_id):
@@ -321,6 +322,68 @@ def purpleConversation(row, colname, col_defs, path):
     return d_row
 
 
+def KaKaoTalk_DB_1(path):
+    app = 'KakaoTalk'
+
+    # db 열기
+    dbfile = path + 'databases/KakaoTalk.db'
+    db = sqlcipher.connect(dbfile)
+    cur = db.cursor()
+
+    # #'user_id' : '사용자',
+    chat_logsColname = {'user_id': '유저아이디', 'message': '메시지', 'created_at': '보낸시간'}
+    chat_logsRowlist = export(app, cur, 'chat_logs', chat_logsColname)
+    # KakaoTalk.db에 chat_logs 테이블 내용 추출
+
+    colname = [chat_logsColname.values()]
+    rowlist = [chat_logsRowlist]
+
+    return colname, rowlist
+
+
+def KaKaoTalk_DB_2(path):
+    app = 'KakaoTalk'
+
+    # db 열기
+    dbfile = path + 'databases/KakaoTalk2.db'
+    db = sqlcipher.connect(dbfile)
+    cur = db.cursor()
+
+    #
+    friendsColname = {'id': '아이디', 'name': '사용자'}
+    friendsRowlist = export(app, cur, 'friends', friendsColname)
+
+    colname = [friendsColname.values()]
+    rowlist = [friendsRowlist]
+
+    return colname, rowlist
+
+
+def kakaoConversation(row, colname, col_defs, compare=None, mediaPath=None):
+    d_row = []
+    flag2 = 0
+
+    for en, kr in colname.items():
+        value = row[col_defs[en]]
+
+        if en == 'user_id' and value != '':
+            xid = value
+
+        elif en == 'message' and value != '':
+            enc_msg = value
+            value = decrypt(xid, enc_msg)
+        elif en == 'created_at' and value != '':
+            value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
+        elif en == 'name' and value != '':
+            enc_name = value
+            flag2 = 1
+        d_row.append(value)
+
+    if flag2 == 1:
+        d_row[1] = decrypt(str(64081481), enc_name)
+
+    return d_row
+
 # Lysn, TongTong 내용 추출하기
 def export(app, cur, table, colname, compare=None, mediaPath=None):
     cur.execute('pragma table_info('+table+')')
@@ -337,6 +400,8 @@ def export(app, cur, table, colname, compare=None, mediaPath=None):
         rowlist = [tongtongConversation(row,colname,col_defs,mediaPath) for row in rows]
     elif app == 'Wickr':
         rowlist = [WickrConversation(row,colname,col_defs,mediaPath) for row in rows]
+    elif app == 'KakaoTalk':
+        rowlist = [kakaoConversation(row, colname, col_defs, mediaPath) for row in rows]
     elif app == 'Purple':
         rowlist = [purpleConversation(row, colname, col_defs, mediaPath) for row in rows]
 

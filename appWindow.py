@@ -11,6 +11,7 @@ from LysnWindow import LysnScreen
 from TongTongWindow import TongTongScreen
 from WickrWindow import WickrScreen
 from PurpleWindow import PurpleScreen
+from KakaoWindow import KakaoScreen
 from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData
 from button import Button
 
@@ -90,7 +91,7 @@ class appScreen(QWidget):
         self.label.setFont(font)
 
         # button
-        self.KakaoTalkButton = Button(QPixmap("image/kakao.png"), 130)
+        self.KakaoTalkButton = Button(QPixmap("image/kakao.png"), 130, self.showKakaoWindow)
         self.WeChatButton = Button(QPixmap("image/wechat.png"), 130, self.showPurpleWindow)
         self.LysnButton = Button(QPixmap("image/lysn.png"), 130, self.showLysnWindow)
         self.TongTongButton = Button(QPixmap("image/tong.png"), 130, self.showTongTongWindow)
@@ -208,7 +209,19 @@ class appScreen(QWidget):
         self.PurpleWindow.exec()
         self.show()
 
+    def showKakaoWindow(self):
+        reply = self.checkData('KakaoTalk')
+        if reply == 'Yes':
+            WickrData(self.phoneNo)  # Kakao 데이터 추출
+        elif reply == 'Already_Exits_No':
+            pass
+        elif reply == 'Back':
+            return
 
+        self.hide()  # hide main window
+        self.KakaoWindow = KakaoScreen(self.phoneNo)
+        self.KakaoWindow.exec()
+        self.show()
 
     def checkData(self, app):
 
