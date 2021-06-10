@@ -1,13 +1,18 @@
 from pysqlcipher3 import dbapi2 as sqlcipher
+
 import os
 import datetime
 import time
+import json
 import xml.etree.ElementTree as elemTree
+from requests import get
+from datetime import datetime
 from lysn_key import userDB_key, talkDB_key
 from tong_decrypt import tong_dec
 from wickr_decrypt import wickrDB_key, wickr_media
+from kakao_decrypt import decrypt
 from purple_decrypt import purple_dec
-from kakao_decrypt import *
+from wechat_key import wechat_en, wechat_path, wechat_ua, wechat_imei
 
 # lysn user.db 내용 추출 
 def lysn_userDB(path, android_id):
@@ -47,14 +52,14 @@ def lysn_talkDB(path, android_id, rowlist):
     # db 열기
     db = sqlcipher.connect(dbfile)
     talkkey = talkDB_key(useridx)
-    print(talkkey)
+    
     db.execute('pragma key="'+talkkey+'"')
     db.execute('PRAGMA cipher_compatibility = 3')
     cur = db.cursor()
 
     # 테이블 추출할 내용 지정
     # chats
-    chatsColname = {'time':'시간', 'sender':'보낸사람', 'text':'메시지', 'type':'타입', 'roomidx':'채팅방 번호', 'url':'파일'}
+    chatsColname = {'time':'시간', 'sender':'보낸사람', 'roomidx':'채팅방 번호', 'type':'타입', 'text':'메시지', 'url':'파일'}
     chatsRowlist = export(app, cur, 'chats', chatsColname, ulist, path) # talk.db에 chats 테이블 내용 추출
     
     # rooms
@@ -111,48 +116,65 @@ def tongtong_gcmDB(path):
     cur = db.cursor()
     
     # 테이블 추출할 내용 지정
-    # chatting
-    chattingColname = {'date' : '시간', 'name' : '보낸사람',  'msg' : '메시지', 'userId' : '유저 고유 아이디', 'thumbnailPath':'사진', 'videoPath':'비디오'}
-    chattingRowlist = export(app, cur, 'chatting', chattingColname, None, path)  # gcm.db에 chatting 테이블 내용 추출
-
     # chatRoomList
-    roomColname = {'roomName':'채팅방 이름', 'date' : '시간', 'userId' : '유저 고유 아이디', 'msg' : '마지막 메시지', 'name' : '마지막 보낸사람'}
+    roomColname = {'roomKey':'채팅방 번호', 'roomName':'채팅방 이름', 'date' : '마지막 보낸 시간', 
+                    'userId' : '유저 고유 아이디', 'member':'채팅방 인원', 'msg' : '마지막 메시지'}
     roomRowlist = export(app, cur, 'chatRoomList', roomColname)  # gcm.db에 chatting 테이블 내용 추출
 
-    # contact
-    contactColname = {'name': '친구 이름', 'phone': '핸드폰 번호'}
-    contactRowlist = export(app, cur, 'contacts', contactColname)  # gcm.db에 contact 테이블 내용 추출
+    # chatting
+    chattingColname = {'date':'시간', 'userId':'유저 고유 아이디', 'name':'보낸사람', 'roomKey':'채팅방 번호', 
+                        'msgType':'타입', 'msg':'메시지', 'thumbnailPath':'사진', 'videoPath':'비디오'}
+    chattingRowlist = export(app, cur, 'chatting', chattingColname, roomRowlist, path)  # gcm.db에 chatting 테이블 내용 추출
 
-    colname = [chattingColname.values(), roomColname.values(), contactColname.values()]
-    rowlist = [chattingRowlist, roomRowlist, contactRowlist]
+    # friend
+    friendColname = {'userId': '유저 고유 아이디', 'name':'이름', 'phoneNumber': '핸드폰 번호'}
+    friendRowlist = export(app, cur, 'friendsList', friendColname)  # gcm.db에 contact 테이블 내용 추출
+
+    colname = [chattingColname.values(), roomColname.values(), friendColname.values()]
+    rowlist = [chattingRowlist, roomRowlist, friendRowlist]
 
     return colname, rowlist
 
 
 # TongTong data 변환
-def tongtongConversation(row, colname, col_defs, path):
+def tongtongConversation(row, colname, col_defs, compare, path):
     d_row = []
     for en, kr in colname.items():
         value = row[col_defs[en]]
-        userId = ''
+        if value == None: value = ''
 
-        if en == 'userID' and userId != '':
-            userId = row[col_defs[en]]
+        if en == 'userId':
+            userId = value
         elif en == 'msg' and userId != '':
-            enc_msg = row[col_defs[en]]
+            enc_msg = value
             value = tong_dec(userId, enc_msg)
-
-
+        elif en == 'msgType':
+            if value == 0: value = 'text'
+            elif value == 1: value = 'image'
+            elif value == 2: value = 'video'
+            elif value == 4: value = 'audio'
+            else: value = 'etc'
 
         # 미디어 파일 추출
-        elif kr == '사진' and value != '' and value != None:
+        elif kr == '사진' and value != '':
             s=value.split('/')
             value=path+'TongMedia/'+s[-2]+'/'+s[-1]
-
-        elif kr == '비디오' and value != '' and value != None:
+        elif kr == '비디오' and value != '':
             s=value.split('/')
             value=path+'TongVideo/'+s[-2]+'/'+s[-1]
-
+        elif en == 'roomName':
+            roomName = value
+        elif en == 'member':
+            names = []
+            if value == '':
+                value = roomName
+            else:
+                value=json.loads(value)
+                for data in value:
+                    names.append(data['name'])
+                nameList = [data['name'] for data in value]
+                value = ', '.join(nameList)
+        
         d_row.append(value)
 
     return d_row
@@ -164,8 +186,9 @@ def wickrDB(path, password):
     skdata = f.read()
     f.close()
 
-    wickrkey = wickrDB_key(skdata, password) # user.db key 구하기
+    wickrkey = wickrDB_key(skdata, password)
     print(wickrkey)
+
     # db 열기
     dbfile = path + 'databases/wickr_db'
     db = sqlcipher.connect(dbfile)
@@ -175,32 +198,43 @@ def wickrDB(path, password):
     
     # 테이블 추출할 내용 지정
     # Wickr_Message
-    messageColname = {'timestamp':'시간','messagePayload':'보낸사람','cachedText':'메시지','type':'타입','media':'미디어'}
+    messageColname = {'timestamp':'시간','messagePayload':'보낸사람', 'vGroupID':'채팅방', 'type':'타입', 'cachedText':'메시지','media':'미디어'}
     messageRowlist = export(app, cur, 'Wickr_Message', messageColname, None, path)  # wickr_db에 Wickr_Message 테이블 내용 추출
 
     # Wickr_User
-    userColname = {'customName':'닉네임', 'userAlias':'사용자 ID','lastActivityTime':'마지막 활동시간'} #,'userImageSecure':'프로필 사진'
+    userColname = {'serverIDHash':'유저 해시값','customName':'닉네임', 'userAlias':'사용자 ID','lastActivityTime':'마지막 활동시간'} #,'userImageSecure':'프로필 사진'
     userRowlist = export(app, cur, 'Wickr_User', userColname, None, path)  # wickr_db에 Wickr_User 테이블 내용 추출
-
     
-    colname = [messageColname.values(), userColname.values()]
-    rowlist = [messageRowlist, userRowlist]
+    # Wickr_ConvoUser
+    convuserColname = {'vGroupID':'cvu 채팅방 번호', 'serverIDHash':'사용자 ID'} #,'userImageSecure':'프로필 사진'
+    convuserRowlist = export(app, cur, 'Wickr_ConvoUser', convuserColname, userRowlist, path)  # wickr_db에 Wickr_User 테이블 내용 추출
+
+    # Wickr_Convo
+    convoColname = {'vGroupID':'채팅방 번호', 'chatRoom':'채팅방 인원'} #,'userImageSecure':'프로필 사진'
+    convoRowlist = export(app, cur, 'Wickr_Convo', convoColname, convuserRowlist, path)  # wickr_db에 Wickr_User 테이블 내용 추출
+
+    colname = [messageColname.values(), userColname.values(), convoColname.values()]
+    rowlist = [messageRowlist, userRowlist, convoRowlist]
 
     return colname, rowlist
 
-# TongTong data 변환
-def WickrConversation(row, colname, col_defs, path=None):
+# Wickr data 변환
+def WickrConversation(row, colname, col_defs, compare, path=None):
     d_row = []
-    flag = 0
-
+    flag, flag2 = 0, 0
+    msg = ''
     for en, kr in colname.items():
-        if en != 'type' and en != 'media':
+        if en != 'type' and en != 'media' and en != 'chatRoom':
             value = row[col_defs[en]]
+        if value == None: value = ''
+
         # 시간 변환
-        if (kr == '시간' or kr == '마지막 활동시간') and value != None:
+        if (kr == '시간' or kr == '마지막 활동시간') and value != '':
             value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
+        elif kr == '메시지':
+            msg = value
         elif kr == '보낸사람':
-            a=value.find(b'\x12')
+            a=value.find(b'\x12',2)
             username = value[2:a]
             try:
                 value=username.decode()
@@ -216,24 +250,31 @@ def WickrConversation(row, colname, col_defs, path=None):
                     type = mdkdata[a+2:aa].decode()
                     mdkdata = mdkdata[aa+2:]
                 except: # 동영상
-                    b=mdkdata.find(b'\x0A\x09')
-                    bb=mdkdata.find(b'\x12', b)
-                    type = mdkdata[b+2:bb].decode()
-                    mdkdata = mdkdata[bb+2:]
-                
-                # filename, mdk 구하기
-                s=(mdkdata.find(b'\x18'))
-                c=(mdkdata.find(b'\x2A\x24'))
-                d=(mdkdata.find(b'\x32\x21\x00'))
-                e=(mdkdata.find(b'\x3A\x80\x01'))
+                    try:
+                        b=mdkdata.find(b'\x0A\x09')
+                        bb=mdkdata.find(b'\x12', b)
+                        type = mdkdata[b+2:bb].decode()
+                        mdkdata = mdkdata[bb+2:]
+                    except:
+                        value = 'Wickr'
+                        type = 'etc'
+                        flag=0
+                        flag2 = 1
+                        
+                if flag2 == 0:
+                    # filename, mdk 구하기
+                    s=(mdkdata.find(b'\x18'))
+                    c=(mdkdata.find(b'\x2A\x24'))
+                    d=(mdkdata.find(b'\x32\x21\x00'))
+                    e=(mdkdata.find(b'\x3A\x80\x01'))
 
-                decfilename = (mdkdata[:s]).decode()
-                encfilename=(mdkdata[c+2:d]).decode()
-                mdk=(mdkdata[d+3:e])
+                    decfilename = (mdkdata[:s]).decode()
+                    encfilename=(mdkdata[c+2:d]).decode()
+                    mdk=(mdkdata[d+3:e])
 
-                # 보낸사람 구하기
-                f=value.find(b'\x2A')
-                value = value[2:f].decode()
+                    # 보낸사람 구하기
+                    f=value.find(b'\x2A')
+                    value = value[2:f].decode()
 
         elif en == 'type':
             value = type          
@@ -251,8 +292,23 @@ def WickrConversation(row, colname, col_defs, path=None):
                 f = open(path +'files/dec/'+value, 'wb+')
                 f.write(mediafile)
                 f.close()
+        
+        elif en == 'serverIDHash' and kr == '사용자 ID':
+            for ulist in compare:
+                if value == ulist[0]:   
+                    value = ulist[2]
 
+        elif kr == '채팅방 번호':
+            for cp in compare:
+                if cp[0] == value:
+                    chatnames = [cp[1] for cp in compare if cp[0] == value]
+        elif en == 'chatRoom':
+            value = ', '.join(chatnames)
+            
         d_row.append(value)
+
+    if msg == '':
+        d_row[1] = d_row[1][:-2]
         
     return d_row
 
@@ -262,65 +318,110 @@ def purple_DB(path):
 
     # db 열기
     dbfile = path + 'databases/Commuity.db'
+    os.makedirs(path+'purpleMedia', exist_ok=True)
 
     db = sqlcipher.connect(dbfile)
     cur = db.cursor()
 
     # 테이블 추출할 내용 지정
     # limemessage
-    chattingColname = {'dateTime': '시간', 'senderGameUserId': '유저 고유 아이디', 'content': '메시지',
-                       'senderCharacterName': '보낸사람', 'optional': '이미지다운로드', 'messageType': '타입'}
-    chattingRowlist = export(app, cur, 'limemessage', chattingColname, None,
-                             path)  # Commuity.db에 chatting 테이블 내용 추출
+    chattingColname = {'dateTime': '시간', 'senderCharacterName': '보낸사람', 
+                        'groupId':'그룹 ID', 'messageType': '타입', 'content': '메시지', 'optional': '파일'}
+    chattingRowlist = export(app, cur, 'limemessage', chattingColname, None, path)  # Commuity.db에 chatting 테이블 내용 추출
+
+    # limegroupuserinfo
+    roomUserColname = {'groupId': '그룹 ID user', 'characterName':'그룹 유저'}
+    roomUserRowlist = export(app, cur, 'limegroupuserinfo', roomUserColname, None, path)
+    
+    # limegroupownerinfo
+    roomOwnerColname = {'groupId': '그룹 ID owner', 'ownerCharacterName':'그룹 소유자', 'groupMember':'그룹 멤버'}
+    roomOwnerRowlist = export(app, cur, 'limegroupownerinfo', roomOwnerColname, roomUserRowlist, path)
 
     # limegroup
-    roomColname = {'dateCreated': '시간', 'lastMessageContent': '마지막 보낸 메세지', 'name': '마지막 보낸 사람', 'groupId': '그룹 고유 ID'}
-    roomRowlist = export(app, cur, 'limegroup', roomColname, None, path)
+    roomColname = {'groupId': '그룹 고유 ID', 'gameChannelType':'채널 타입', 'name':'그룹 이름', 'member':'그룹 인원', 
+                    'groupImage':'그룹 프로필 이미지', 'dateCreated': '마지막 보낸 시간', 'lastMessageContent': '마지막 보낸 메세지'}
+    roomRowlist = export(app, cur, 'limegroup', roomColname, roomOwnerRowlist, path)
 
     # sqlite_sequence
     seqColname = {'name': '테이블 이름', 'seq': '레코드 개수'}
     seqRowlist = export(app, cur, 'sqlite_sequence', seqColname, None, path)
+    
     colname = [chattingColname.values(), roomColname.values(), seqColname.values()]
     rowlist = [chattingRowlist, roomRowlist, seqRowlist]
 
     return colname, rowlist
 
 
-def purpleConversation(row, colname, col_defs, path):
+def purpleConversation(row, colname, col_defs, compare, path):
     d_row = []
     for en, kr in colname.items():
-        value = row[col_defs[en]]
-        if en == 'content' and value != '':
-            enc_msg = row[col_defs[en]]
+        if en != 'groupMember' and en != 'member':
+            value = row[col_defs[en]]
+        if value == None: value = ''
 
+        # 메시지 복호화
+        if en == 'content' and value != '':
             tree = elemTree.parse(path + 'shared_prefs/NC Community.xml')
             user = tree.find('./string[@name="shared_appsflyer_user_id"]')
             user = user.text.replace('_mobilepurple', '')
-            value = purple_dec(user, enc_msg)
-        elif kr == '시간':
-            t = time.localtime(value / 1000)
-            value = str(t.tm_year) + "-" + str(t.tm_mon) + "-" + str(t.tm_mday) + " " + str(t.tm_hour) + ":" + str(
-                t.tm_min) + ":" + str(t.tm_sec)
-        elif en == 'optional' and value != '' and value != '':
-            try:
-                index = value.find('downloadUrl')
-                if (index != -1):
-                    i = index + 14
-                    strURL = ''
-                    while (value[i] != '"'):
-                        strURL += value[i]
-                        i = i + 1
-                    value = strURL
-                else:
-                    value = ''
-            except:
+            value = purple_dec(user, value)
+        # 그룹 인원 구하기
+        elif kr == '그룹 ID owner': groupidowner = value
+        elif kr == '그룹 소유자': groupowner = value
+        elif kr == '그룹 멤버':
+            value = [ulist[1] for ulist in compare if groupidowner == ulist[0]]
+            value.append(groupowner)
+            value = ', '.join(value)
+        elif kr == '그룹 고유 ID': groupid = value
+        elif kr == '채널 타입': 
+            if value == '': value = 'NORMAL'
+            channeltype = value
+        elif kr == '그룹 이름': groupname = value
+        elif en == 'member':
+            if channeltype == 'WORLD':
+                value = groupname
+            else:
+                for olist in compare:
+                    if groupid == olist[0]:   
+                        value = olist[2]
+        # 시간
+        elif kr == '시간' or kr == '마지막 보낸 시간':
+            value = datetime.datetime.fromtimestamp(value / 1000).strftime('%Y-%m-%d %H:%M:%S')  
+        # 미디어     
+        elif en == 'groupImage' and value != '':
+            imageUrl = value
+            s=imageUrl.split('/')
+            iname = s[-1]         
+        elif en == 'messageType':
+            msgtype = value
+        elif en == 'optional' and value != '':
+            # path 구하기
+            if msgtype == 'IMAGE':
+                image=json.loads(value)[0]
+                imageUrl=image['downloadUrl']
+                s=imageUrl.split('/')
+                iname = s[-1]+'.jpg'
+            elif msgtype == 'NEMO':
+                image=json.loads(value)
+                imageUrl=image['url']
+                s=imageUrl.split('/')
+                iname = s[-2]+'_'+s[-1]+'.jpg'    
+            else:
                 value = ''
-                d_row.append(value)
+        # url 파일 저장
+        if en == 'groupImage' or en == 'optional':
+            if value != '':
+                try:
+                    value = path + 'purpleMedia/' + iname
+                    with open(value, 'wb') as file:
+                        response = get(imageUrl)
+                        file.write(response.content)
+                except:
+                    value = path + 'purpleMedia/' + iname
 
         d_row.append(value)
 
     return d_row
-
 
 def KaKaoTalk_DB_1(path):
     app = 'KakaoTalk'
@@ -330,59 +431,124 @@ def KaKaoTalk_DB_1(path):
     db = sqlcipher.connect(dbfile)
     cur = db.cursor()
 
-    # #'user_id' : '사용자',
-    chat_logsColname = {'user_id': '유저아이디', 'message': '메시지', 'created_at': '보낸시간'}
-    chat_logsRowlist = export(app, cur, 'chat_logs', chat_logsColname)
+    chat_logsColname = {'message' : '메시지','user_id':'보낸 사람', 'created_at' : '생성'}
+    chat_logsRowlist = export(app, cur, 'chat_logs', chat_logsColname)  
+    
     # KakaoTalk.db에 chat_logs 테이블 내용 추출
-
     colname = [chat_logsColname.values()]
     rowlist = [chat_logsRowlist]
-
+    
     return colname, rowlist
-
 
 def KaKaoTalk_DB_2(path):
     app = 'KakaoTalk'
 
-    # db 열기
+    #db 열기
     dbfile = path + 'databases/KakaoTalk2.db'
     db = sqlcipher.connect(dbfile)
     cur = db.cursor()
 
-    #
-    friendsColname = {'id': '아이디', 'name': '사용자'}
-    friendsRowlist = export(app, cur, 'friends', friendsColname)
+    friendsColname = {'id' : '아이디', 'name' : '사용자'}
+    friendsRowlist = export(app, cur, 'friends', friendsColname) 
 
     colname = [friendsColname.values()]
     rowlist = [friendsRowlist]
 
     return colname, rowlist
-
-
+    
 def kakaoConversation(row, colname, col_defs, compare=None, mediaPath=None):
     d_row = []
-    flag2 = 0
+    flag=0
+    for en, kr in colname.items():
+        value = row[col_defs[en]]
+            
+        if en == 'message' and value != '':
+            enc_msg = value
+            flag = 1
+        elif en == 'user_id' and value != '':
+            xid = value
+        d_row.append(value)
 
+    if flag == 1:
+        d_row[0] = decrypt(xid, enc_msg)
+
+    return d_row
+
+def wechat_db(path):
+    app = 'Wechat'
+
+    dbfile = path + 'MicroMsg/' + wechat_path() + '/EnMicroMsg-dec.db'
+    # mediaPath = path + '/media'
+    imei = wechat_imei()
+    uin = wechat_ua()
+    db = sqlcipher.connect(dbfile)
+
+    #db.execute('pragma key="' + wechat_en(uin, imei) + '"')
+    db.execute("pragma key = '30826b7';")
+    db.execute('PRAGMA cipher_use_hmac = OFF;')
+    db.execute('PRAGMA cipher_page_size = 1024;')
+    db.execute('PRAGMA kdf_iter = 4000;')
+    db.execute('PRAGMA cipher_use_kdf = OFF;' )
+    cur = db.cursor()
+
+    encolname = {'type': '파일타입', 'isSend': '수/발신', 'talker': '채팅방에 있는 유저ID', 'createTime': '보낸 시간', 'content': '메세지',
+                 'imgPath': '이미지'}
+    enrowlist = export(app, cur, 'message', encolname)
+
+    colname = [encolname.values()]
+    rowlist = [enrowlist]
+
+    return colname, rowlist
+
+
+def wechatConversation(row, colname, col_defs, compare, mediaPath):
+    d_row = []
     for en, kr in colname.items():
         value = row[col_defs[en]]
 
-        if en == 'user_id' and value != '':
-            xid = value
+        if kr == '파일타입':
+            if value == 1:
+                value = '메세지'
+            elif value == 3:
+                value = '사진'
+            elif value == 43:
+                value = '영상'
+            elif value == 34:
+                value = '음성 메세지'
+            elif value == 10000:
+                value = '시스템 공지'
+            else:
+                pass
 
-        elif en == 'message' and value != '':
-            enc_msg = value
-            value = decrypt(xid, enc_msg)
-        elif en == 'created_at' and value != '':
-            value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
-        elif en == 'name' and value != '':
-            enc_name = value
-            flag2 = 1
+        elif kr == '수/발신':
+            if value == 0:
+                value = '수신'
+            elif value == 1:
+                value = '발신'
+            else:
+                pass
+
+        elif kr == '보낸 시간':
+            unixTimestamp = value / 1000
+            value = datetime.fromtimestamp(int(unixTimestamp))
+
+
+        elif kr == '메세지':
+            if value == None or len(value) >= 200:
+                value = ''
+            elif 'wxid' in value:
+                value = '미디어 파일'
+                pass
+
+        elif kr == '이미지':
+            if value == None:
+                value = ''
+            else:
+                pass
         d_row.append(value)
 
-    if flag2 == 1:
-        d_row[1] = decrypt(str(64081481), enc_name)
-
     return d_row
+
 
 # Lysn, TongTong 내용 추출하기
 def export(app, cur, table, colname, compare=None, mediaPath=None):
@@ -397,21 +563,20 @@ def export(app, cur, table, colname, compare=None, mediaPath=None):
     if app == 'lysn':
         rowlist = [lysnConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
     elif app == 'TongTong':
-        rowlist = [tongtongConversation(row,colname,col_defs,mediaPath) for row in rows]
+        rowlist = [tongtongConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
     elif app == 'Wickr':
-        rowlist = [WickrConversation(row,colname,col_defs,mediaPath) for row in rows]
+        rowlist = [WickrConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
     elif app == 'KakaoTalk':
-        rowlist = [kakaoConversation(row, colname, col_defs, mediaPath) for row in rows]
+        rowlist = [kakaoConversation(row,colname,col_defs,mediaPath) for row in rows]
     elif app == 'Purple':
-        rowlist = [purpleConversation(row, colname, col_defs, mediaPath) for row in rows]
+        rowlist = [purpleConversation(row, colname, col_defs, compare, mediaPath) for row in rows]
+    elif app == "Wechat":
+        rowlist = [wechatConversation(row, colname, col_defs, compare, mediaPath) for row in rows]
 
     return rowlist
 
-
-
-
 if __name__ == '__main__':
-
+    
     '''
     path = "C:/AppData/SM-G955N/Lysn/"
     android_id = '4b0629381a2249a5'
@@ -424,6 +589,36 @@ if __name__ == '__main__':
     for row in rowlists[0]:
         print(row)
     
+    
+    path = "C:/AppData/SM-G955N/TongTong/"
+    colnames, rowlists = tongtong_gcmDB(path)
+    
+    print(colnames[0])
+    for row in rowlists[0]:
+        print(row)
+    
+    
+    path = "C:/AppData/SM-G955N/KakaoTalk/"
+    colnames, rowlists = KaKaoTalk_DB_1(path)
+    
+    print(colnames[0])
+    for row in rowlists[0]:
+        print(row)
+    
+    
+    path = "C:/AppData/SM-G955N/W/"
+    password = 'dltndk11@@'
+    colnames, rowlists = wickrDB(path, password)
+    
+    print(colnames[0])
+    for row in rowlists[0]:
+        print(row)
     '''
 
-
+    path = "C:/AppData/SM-G955N/PurPle/"
+    colnames, rowlists = purple_DB(path)
+    
+    print(colnames[1])
+    for row in rowlists[1]:
+        print(row)
+        
