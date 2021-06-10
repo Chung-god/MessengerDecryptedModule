@@ -12,7 +12,8 @@ from TongTongWindow import TongTongScreen
 from WickrWindow import WickrScreen
 from PurpleWindow import PurpleScreen
 from KakaoWindow import KakaoScreen
-from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData
+from WechatWindow import WechatScreen
+from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData, WechatData
 from button import Button
 
 
@@ -24,10 +25,10 @@ class appScreen(QWidget):
     def setupUi(self):
         # Window Setting
         re1 = 1
-        self.setGeometry(500, 70, 800, 600)
+        self.setGeometry(500, 70, 1100, 800)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
-        self.setContentsMargins(30, 50, 30, 50)
+        self.setContentsMargins(30, 30, 30, 30)
 
         # Window Backgrond
         palette = QPalette()
@@ -47,7 +48,7 @@ class appScreen(QWidget):
         self.text1.setFont(font)
 
         # 핸드폰 사진
-        self.phonePhoto = Button(QPixmap("image/phone2.png"), 170)
+        self.phonePhoto = Button(QPixmap("image/phone2.png"), 200)
         self.phonePhoto.setEnabled(False)
         self.phonePhoto.setStyleSheet('background:transparent;')
         self.phonePhoto.setStyleSheet('background:rgb(242, 242, 242);')
@@ -92,31 +93,65 @@ class appScreen(QWidget):
 
         # button
         self.KakaoTalkButton = Button(QPixmap("image/kakao.png"), 130, self.showKakaoWindow)
-        self.WeChatButton = Button(QPixmap("image/wechat.png"), 130, self.showPurpleWindow)
+        self.WeChatButton = Button(QPixmap("image/wechat.png"), 130, self.showWechatWindow)
         self.LysnButton = Button(QPixmap("image/lysn.png"), 130, self.showLysnWindow)
         self.TongTongButton = Button(QPixmap("image/tong.png"), 130, self.showTongTongWindow)
+        self.PurpleButton = Button(QPixmap("image/purple.png"), 130, self.showPurpleWindow)
         self.WickrButton = Button(QPixmap("image/wickr.png"), 130, self.showWickrWindow)
-
+        
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.KakaoTalkButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.WeChatButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.LysnButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.TongTongButton.setCursor(QCursor(Qt.PointingHandCursor))
+        self.PurpleButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.WickrButton.setCursor(QCursor(Qt.PointingHandCursor))
 
+        app1 = QLabel("KakaoTalk ")
+        app2 = QLabel("WeChat")
+        app3 = QLabel("Lysn")
+        app4 = QLabel("TongTong")
+        app5 = QLabel(" PurPle")
+        app6 = QLabel("  Wickr")
+        appname = [app1, app2, app3, app4, app5, app6]
+
+        font.setBold(False)
+        font.setPointSize(font.pointSize()-1)
+        for app in appname:
+            app.setFixedSize(130, 30)
+            app.setAlignment(Qt.AlignCenter)
+            app.setStyleSheet('color: rgb(55,48,46);')
+            app.setFont(font)
+            
         # 레이아웃2
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.KakaoTalkButton)
         hbox2.addWidget(self.WeChatButton)
         hbox2.addWidget(self.LysnButton)
         hbox2.addWidget(self.TongTongButton)
+        hbox2.addWidget(self.PurpleButton)
         hbox2.addWidget(self.WickrButton)
+        
         hbox2.setContentsMargins(20, 0, 20, 0)
         hbox2.setSpacing(15)
-
+        
+        # 레이아웃 3
+        hbox3 = QHBoxLayout()
+        hbox3.addWidget(app1)
+        hbox3.addWidget(app2)
+        hbox3.addWidget(app3)
+        hbox3.addWidget(app4)
+        hbox3.addWidget(app5)
+        hbox3.addWidget(app6)
+        
+        hbox3.setContentsMargins(20, 0, 20, 0)
+        hbox3.setSpacing(15)
+        
         layout2 = QVBoxLayout()
         layout2.addWidget(self.label)
         layout2.addLayout(hbox2)
+        layout2.addLayout(hbox3)
+        layout2.setSpacing(0)
 
         layout = QVBoxLayout()
         layout.addLayout(layout1)
@@ -221,6 +256,20 @@ class appScreen(QWidget):
         self.hide()  # hide main window
         self.KakaoWindow = KakaoScreen(self.phoneNo)
         self.KakaoWindow.exec()
+        self.show()
+
+    def showWechatWindow(self):
+        reply = self.checkData('Wechat')
+        if reply == 'Yes':
+            WechatData(self.phoneNo)  # Kakao 데이터 추출
+        elif reply == 'Already_Exits_No':
+            pass
+        elif reply == 'Back':
+            return
+
+        self.hide()  # hide main window
+        self.WechatWindow = WechatScreen(self.phoneNo)
+        self.WechatWindow.exec()
         self.show()
 
     def checkData(self, app):
