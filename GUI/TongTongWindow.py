@@ -12,6 +12,7 @@ from button import Button
 from videoWindow import video, image
 
 import os
+import copy
 
 class TongTongScreen(QDialog):
     def __init__(self, phoneNo):
@@ -186,6 +187,7 @@ class TongTongScreen(QDialog):
     def gcmComboEvent(self):
         if self.gcmComboBox.currentText() == 'chatting':
             self.chatRoomComboBox.show()
+            self.chatRoomComboBox.setCurrentIndex(0)
             colname, rowlist = self.gcmColnames[0], self.chatrowlists[0]
         elif self.gcmComboBox.currentText() == 'chatRoomList':
             self.chatRoomComboBox.hide()
@@ -197,10 +199,8 @@ class TongTongScreen(QDialog):
         self.showTable(colname, rowlist)
     
     def chatroom(self):
-        import copy
-
         self.gcmColnames[0] = list(self.gcmColnames[0])
-        self.gcmColnames[0][3] = '받는사람'
+        self.gcmColnames[0][2] = '받는사람'
         self.chatrowlists = []
         talkrowlist = self.gcmRowlists[0]
 
@@ -208,11 +208,13 @@ class TongTongScreen(QDialog):
             crowlist = []
             for i in range(len(self.gcmRowlists[0])):
                 people = copy.deepcopy(self.chatRoomPeople[k])
-                if talkrowlist[i][3] == self.chatRoomNum[k]:
-                    if talkrowlist[i][2] in people:
-                        people.remove(talkrowlist[i][2])
+                if talkrowlist[i][2] == self.chatRoomNum[k]:
+                    if talkrowlist[i][1] in people:
+                        people.remove(talkrowlist[i][1])
                     people=', '.join(people)
-                    talkrowlist[i][3] = people
+                    talkrowlist[i][2] = people
+                    if people == '':
+                        talkrowlist[i][2] = talkrowlist[i][1]
                     crowlist.append(talkrowlist[i])
             
             self.chatrowlists.append(crowlist)
@@ -227,6 +229,12 @@ class TongTongScreen(QDialog):
 
     def TongTongData(self):
         self.gcmColnames, self.gcmRowlists = tongtong_gcmDB(self.path)
+
+        for i in range(len(self.gcmRowlists[0])):
+            del self.gcmRowlists[0][i][1]
+        self.gcmColnames[0] = (list(self.gcmColnames[0]))
+        del self.gcmColnames[0][1]
+
         self.chatRoomLen = len(self.gcmRowlists[1])
         self.chatRoomNum = [self.gcmRowlists[1][i][0] for i in range(self.chatRoomLen)]
         self.chatRoomName = [self.gcmRowlists[1][i][1] for i in range(self.chatRoomLen)]
@@ -253,7 +261,8 @@ class TongTongScreen(QDialog):
                 media = m
             if list(colname)[m] == '비디오':
                 video = m
-
+            if list(colname)[m] == '타입':
+                types = m
         # col 개수 지정
         if media != -1:
             self.tableWidget.setColumnCount(len(colname)-1)
@@ -274,23 +283,27 @@ class TongTongScreen(QDialog):
                 if j == media: # 사진 or 비디오
                     mpath = rowlist[i][j]
                     vpath = rowlist[i][video]
-                    if rowlist[i][video] != '' and rowlist[i][video] != None: # 사진o 비디오o
-                        if mpath == '': # 사진x 비디오o
-                            mpath = 'image/audio.png' 
-                            vpath = vpath.replace('TongVideo','TongAudio')
+                    tp = rowlist[i][types]
+
+                    if tp == 'audio': # 오디오
+                        mpath = 'image/audio.png'
+                        vpath = vpath.replace('TongVideo','TongAudio')
                         self.btn1 = Button(QPixmap(mpath), 30, self.videoWindow)
                         self.btn1.setText(vpath)
                         self.tableWidget.setCellWidget(i,j,self.btn1)
-                    elif mpath != '': # 사진o 비디오x
+                    elif tp == 'image':
                         self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
                         self.btn1.setText(rowlist[i][j])
+                        self.tableWidget.setCellWidget(i,j,self.btn1)
+                    elif tp == 'video':
+                        self.btn1 = Button(QPixmap(mpath), 30, self.videoWindow)
+                        self.btn1.setText(vpath)
                         self.tableWidget.setCellWidget(i,j,self.btn1)
                 else: # 텍스트
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
                     self.tableWidget.setItem(i, j, item)
         
-
         self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname
         self.rowlist = rowlist

@@ -37,8 +37,8 @@ def image(imageName):
         imageName = 'image/noimage.png'
 
     im_origin = cv2.imread(imageName, cv2.IMREAD_COLOR)
-
     im_origin = imutils.resize(im_origin, height=700)
+
     cv2.namedWindow('Image',cv2.WINDOW_AUTOSIZE)
     cv2.imshow('Image', im_origin)
     cv2.moveWindow('Image', 400,100)

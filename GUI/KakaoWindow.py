@@ -5,28 +5,23 @@ from PyQt5.QtCore import *
 
 from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
-from xml.etree.ElementTree import parse
 
-from exportDB import wickrDB
+from exportDB import *
 from button import Button
 
-from videoWindow import video, image
 
-import os
-import copy
-
-class WickrScreen(QDialog):
+class KakaoScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
         # 초기화
-        self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
-        self.wickrColnames, self.wickrRowlists = [], []
+        self.kakaoColnames, self.kakaoRowlists, self.kakao2Colnames, self.kakao2Rowlists = [], [], [], []
 
         self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/Wickr/'
-
+        self.path = f'C:/AppData/{self.phoneNo}/KakaoTalk/'
+        
+        self.kakaoData()  # 미리 kakaotalk 데이터 모두 가져오기
         self.setupUI()
 
     def setupUI(self):
@@ -48,51 +43,44 @@ class WickrScreen(QDialog):
         self.shortcut.activated.connect(self.handleFind)
 
         # back/search button
-        self.backButton = Button(QPixmap("image/back.png"), 45, self.showAppWindow)
-        self.searchButton = Button(QPixmap("image/search.png"), 45, self.search_items)
-        
+        self.backButton = Button(QPixmap("image/back.png"), 35, self.showAppWindow)
+        self.searchButton = Button(QPixmap("image/search.png"), 35, self.search_items)
+
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
-
-        self.backButton.setToolTip('뒤로가기')
-        self.searchButton.setToolTip('찾기 버튼\n단축키 : ctrl + f')
 
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
         self.searchBox.returnPressed.connect(self.search_items)
 
+        # combo box name => db2
+        self.kakao2ComboBox = QComboBox()
+        self.kakao2ComboBox.addItem("friends")
+        self.kakao2ComboBox.setFixedWidth(100)
+        self.kakao2ComboBox.activated.connect(self.kakao2ComboEvent)
+        self.kakao2ComboBox.hide()
+
         # excel button
         self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
         self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
-        self.excelSaveButton.setToolTip('현재 보고있는 표를 엑셀로 저장하는 버튼')
 
         # open combo box
         self.openComboBox = QComboBox()
-        self.openComboBox.addItem("wickr.db")
+        self.openComboBox.addItem("KakaoTalk.db")
+        self.openComboBox.addItem("KakaoTalk2.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
-        self.openComboBox.setToolTip('Wickr의 데이터베이스')
-
-        # combo box wickr
-        self.wickrComboBox = QComboBox()
-        self.wickrComboBox.addItem("Wickr_Message")
-        self.wickrComboBox.addItem("Wickr_User")
-        self.wickrComboBox.addItem("Wickr_Convo")
-        self.wickrComboBox.setFixedWidth(100)
-        self.wickrComboBox.activated.connect(self.wickrComboEvent)
-        self.wickrComboBox.setToolTip('wickr.db의 Tables')
-
-        # combo chat room
-        self.chatRoomComboBox = QComboBox()
-        self.chatRoomComboBox.hide()
-
-        self.password = QLabel()
-        self.passerror = QLabel()
         
+        # combo box mes => db1
+        self.kakaoComboBox = QComboBox()
+        self.kakaoComboBox.addItem("chat_logs")
+        self.kakaoComboBox.setFixedWidth(100)
+        self.kakaoComboBox.activated.connect(self.kakaoComboEvent)
+
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
         hbox1.addStretch(1)
@@ -100,13 +88,10 @@ class WickrScreen(QDialog):
         hbox1.addWidget(self.searchButton)
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
-        hbox2.addWidget(self.wickrComboBox)
-        hbox2.addWidget(self.chatRoomComboBox)
-        hbox2.addStretch(1)
-        hbox2.addWidget(self.passerror)
+        hbox2.addWidget(self.kakaoComboBox)
+        hbox2.addWidget(self.kakao2ComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
-
         layout = QVBoxLayout()
         layout.addLayout(hbox1)
         layout.addLayout(hbox2)
@@ -115,23 +100,6 @@ class WickrScreen(QDialog):
         self.setLayout(layout)
         self.center()
         self.show()
-
-        self.showDialog()
-        
-        for i in range(self.chatRoomLen):
-            self.chatRoomComboBox.addItem(self.chatRoomNum[i])
-        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
-        self.chatRoomComboBox.setToolTip('Chat Room')
-        self.chatRoomComboBox.show()
-
-    def showDialog(self):
-        text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :', QLineEdit.Password, flags=(Qt.WindowTitleHint|Qt.WindowCloseButtonHint))
-        
-        if ok:
-            self.password.setText(str(text))
-            self.wickrData()  # 미리 Wickr 데이터 모두 가져오기
-        else:
-            self.passerror.setText('데이터를 가져올 수 없습니다.')
 
     def showAppWindow(self):
         self.close()
@@ -185,8 +153,7 @@ class WickrScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.on_off == 0:
-            reset(self, allitems)
+        if self.searchBox.text() == "" and self.findField.text() != "":
             pass
 
         elif self.searchBox.text() == "":
@@ -197,73 +164,41 @@ class WickrScreen(QDialog):
             print("ff None")
 
     # table combo select
-    def wickrComboEvent(self):
-        if self.wickrComboBox.currentText() == 'Wickr_Message':
-            self.chatRoomComboBox.show()
-            colname, rowlist = self.wickrColnames[0], self.chatrowlists[0]
-        elif self.wickrComboBox.currentText() == 'Wickr_User':
-            self.chatRoomComboBox.hide()
-            colname, rowlist = self.wickrColnames[1], self.wickrRowlists[1]
-        elif self.wickrComboBox.currentText() == 'Wickr_Convo':
-            self.chatRoomComboBox.hide()
-            colname, rowlist = self.wickrColnames[2], self.wickrRowlists[2]
+    def kakaoComboEvent(self):
+        if self.kakaoComboBox.currentText() == 'chat_logs':
+            colname, rowlist = self.kakaoColnames[0], self.kakaoRowlists[0]
 
         self.showTable(colname, rowlist)
 
-    def chatroom(self):
-        self.wickrColnames[0] = list(self.wickrColnames[0])
-        self.wickrColnames[0][2] = '받는사람'
-        self.chatrowlists = []
-        talkrowlist = self.wickrRowlists[0]
+    def kakao2ComboEvent(self):
+        if self.kakao2ComboBox.currentText() == 'friends':
+            colname, rowlist = self.kakao2Colnames[0], self.kakao2Rowlists[0]
 
-        for k in range(self.chatRoomLen):
-            crowlist = []
-            for i in range(len(self.wickrRowlists[0])):
-                people = copy.deepcopy(self.chatRoomPeople[k])
-                if talkrowlist[i][2] == self.chatRoomNum[k]:
-                    if talkrowlist[i][1] in people:
-                        people.remove(talkrowlist[i][1])
-                    people=', '.join(people)
-                    talkrowlist[i][2] = people
-                    crowlist.append(talkrowlist[i])
-            
-            self.chatrowlists.append(crowlist)
-    
-    def chatRoomComboEvent(self):
-        
-        colname = self.wickrColnames[0]
-        for k in range(self.chatRoomLen):
-            if self.chatRoomComboBox.currentText() == self.chatRoomNum[k]:
-                rowlist = self.chatrowlists[k]
-        
         self.showTable(colname, rowlist)
 
-    def wickrData(self):
-        try:
-            self.wickrColnames, self.wickrRowlists = wickrDB(self.path, self.password.text())
-        
-            self.chatRoomLen = len(self.wickrRowlists[2])
-            self.chatRoomNum = [self.wickrRowlists[2][i][0] for i in range(self.chatRoomLen)]
-            self.chatRoomPeople = [self.wickrRowlists[2][i][1].split(', ') for i in range(self.chatRoomLen)]
-
-            self.chatroom()
-
-            colname, rowlist = self.wickrColnames[0], self.chatrowlists[0]
-
-            self.f_name = "wickr_db"
-            self.showTable(colname, rowlist)
-            self.passerror.hide()
-        except:
-            self.passerror.setText('비밀번호가 틀렸습니다.')
-            self.showDialog()
+    def kakaoData(self):
+        self.kakaoColnames, self.kakaoRowlists = KaKaoTalk_DB_1(self.path)
+        self.kakao2Colnames, self.kakao2Rowlists = KaKaoTalk_DB_2(self.path)
+        colname, rowlist = self.kakaoColnames[0], self.kakaoRowlists[0]
+        self.f_name = "KakaoTalk_db" #이게 뭘 뜻하는지 찾아볼 것
+        self.showTable(colname, rowlist)
 
     # DB 버튼 클릭 시
     def DBClicked(self):
 
-        if self.openComboBox.currentText() == 'wickr.db':
-            self.wickrComboBox.setCurrentIndex(0)
-            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
-            self.f_name = "wickr_db"
+        if self.openComboBox.currentText() == 'KakaoTalk.db':
+            self.kakao2ComboBox.hide()
+            self.kakaoComboBox.show()
+            self.kakaoComboBox.setCurrentIndex(0)
+            colname, rowlist = self.kakaoColnames[0], self.kakaoRowlists[0]
+            self.f_name = "KakaoTalk_db"
+
+        elif self.openComboBox.currentText() == 'KakaoTalk2.db':
+            self.kakaoComboBox.hide()
+            self.kakao2ComboBox.show()
+            self.kakao2ComboBox.setCurrentIndex(0)
+            colname, rowlist = self.kakao2Colnames[0], self.kakao2Rowlists[0]
+            self.f_name = "KakaoTalk2_db"
 
         self.showTable(colname, rowlist)
 
@@ -283,59 +218,37 @@ class WickrScreen(QDialog):
         self.tableHeader = self.tableWidget.horizontalHeader()
         self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
 
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # 표 너비 지정
+        #self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)  # 표 너비 지정
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
-        
+
         media = -1
         for m in range(len(colname)):
-            if list(colname)[m] == '미디어':
+            if list(colname)[m] == '파일':
                 media = m
-            elif list(colname)[m] == '타입':
-                types = m
-                
+
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
                 if j == media:
-                    tp = rowlist[i][types][:5]
-                    if tp == 'image': # 사진
-                        if os.path.isfile(self.path+'files/dec/'+rowlist[i][j]) == False: #원본파일 없을 경우
-                            mpath = 'image/noimage.png'
-                        else: # 원본 파일 있는 경우
-                            mpath = 'image/image.png'
-                        self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
-                        self.btn1.setText(rowlist[i][j])
-                        self.btn1.setCursor(QCursor(Qt.PointingHandCursor))
-                        self.tableWidget.setCellWidget(i,j,self.btn1)
-
-                    elif tp == 'video': # 비디오
-                        if os.path.isfile(self.path+'files/dec/'+rowlist[i][j]) == False: #원본파일 없을 경우
-                            mpath = 'image/noimage.png'
-                        else: # 원본 파일 있는 경우
-                            mpath = 'image/video.png'
-                        self.btn2 = Button(QPixmap(mpath), 30, self.videoWindow)
-                        self.btn2.setText(rowlist[i][j])
-                        self.btn2.setCursor(QCursor(Qt.PointingHandCursor))
-                        self.tableWidget.setCellWidget(i,j,self.btn2)
-                else: # 텍스트
+                    item = self.getImageLabel(rowlist[i][j])
+                    self.tableWidget.setCellWidget(i, j, item)
+                else:
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
                     self.tableWidget.setItem(i, j, item)
-
-        self.tableWidget.verticalHeader().setDefaultSectionSize(130)
+        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
         self.colname = colname
         self.rowlist = rowlist
 
-    def imageWindow(self):
-        file = self.sender().text()
-        mediaPath = self.path+'files/dec/'+file
-        image(mediaPath)
+    def getImageLabel(self, image):
+        imageLabel = QLabel()
+        imageLabel.setScaledContents(True)
+        pixmap = QPixmap()
+        pixmap.loadFromData(image, 'jpg')
+        imageLabel.setPixmap(pixmap)
+        return imageLabel
 
-    def videoWindow(self):
-        file = self.sender().text()
-        mediaPath = self.path+'files/dec/'+file
-        video(mediaPath)
-    
     def center(self):
         frame_info = self.frameGeometry()
         display_center = QDesktopWidget().availableGeometry().center()
@@ -350,7 +263,7 @@ class WickrScreen(QDialog):
         # create Excel
         wb = openpyxl.Workbook()
         sheet = wb.active
-        sheet.title = "Wickr"
+        sheet.title = "KakaoTalk"
         col_excel = list(self.colname)[0:5]
 
         for x in range(1, len(col_excel) + 1):
@@ -384,14 +297,14 @@ class WickrScreen(QDialog):
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.border = Border(right=Side(border_style="thick"))
 
-        wb.save("Wickr_" + self.f_name + ".xlsx")
+        wb.save("KakaoTalk_" + self.f_name + ".xlsx")
 
 
 if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
-    phoneNo = 'SM-G955N'
-    ui = WickrScreen(phoneNo)
+    app.setStyle(QStyleFactory.create('Fusion'))  # --> 없으면, 헤더색 변경 안됨.
+    phoneNo = 'SM-N976N'
+    ui = KakaoScreen(phoneNo)
     sys.exit(app.exec_())

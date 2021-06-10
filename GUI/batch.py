@@ -38,3 +38,11 @@ def WickrData(phoneNo):
     subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2/ /sdcard/Wickr"', shell=True)
     subprocess.call(moveadb+f' && adb pull /sdcard/Wickr C:/AppData/{phoneNo}', shell=True)
     subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Wickr', shell=True)
+
+def PurpleData(phoneNo):
+    moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
+    if os.path.exists('/sdcard/Purple'):
+        subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Purple', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2/ /sdcard/Wickr"', shell=True)
+    subprocess.call(moveadb+f' && adb pull /sdcard/Purple C:/AppData/{phoneNo}', shell=True)
+    subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Purple', shell=True)

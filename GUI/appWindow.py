@@ -10,8 +10,9 @@ import shutil
 from LysnWindow import LysnScreen
 from TongTongWindow import TongTongScreen
 from WickrWindow import WickrScreen
-
-from batch import LysnData, TongTongData, KakaoTalkData, WickrData
+from PurpleWindow import PurpleScreen
+from KakaoWindow import KakaoScreen
+from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData
 from button import Button
 
 
@@ -22,10 +23,11 @@ class appScreen(QWidget):
 
     def setupUi(self):
         # Window Setting
-        self.setGeometry(500, 70, 800, 600)
+        re1 = 1
+        self.setGeometry(500, 70, 1100, 800)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
-        self.setContentsMargins(30, 50, 30, 50)
+        self.setContentsMargins(30, 30, 30, 30)
 
         # Window Backgrond
         palette = QPalette()
@@ -45,12 +47,12 @@ class appScreen(QWidget):
         self.text1.setFont(font)
 
         # 핸드폰 사진
-        self.phonePhoto = Button(QPixmap("image/phone2.png"), 170)
+        self.phonePhoto = Button(QPixmap("image/phone2.png"), 200)
         self.phonePhoto.setEnabled(False)
         self.phonePhoto.setStyleSheet('background:transparent;')
         self.phonePhoto.setStyleSheet('background:rgb(242, 242, 242);')
 
-        # 핸드폰 정보
+        # 정보
         serialNo, productNo, androidVersion = self.deviceInformation()
         self.text2 = QLabel(f"시리얼 넘버 : {serialNo}")
         self.text3 = QLabel(f"제품 넘버 : {productNo}")
@@ -72,14 +74,13 @@ class appScreen(QWidget):
         v1.addWidget(self.text3)
         v1.addWidget(self.text4)
         v1.setSpacing(0)
-        v1.setContentsMargins(0, 30, 0, 30)
+        v1.setContentsMargins(10, 30, 10, 30)
 
         layout1 = QHBoxLayout()
-        
         layout1.addWidget(self.phonePhoto)
         layout1.addLayout(v1)
         layout1.addStretch(1)
-        
+
         # === APP
         # TEXT
         self.label = QLabel("DB 추출 작업을 진행할 메신저를 선택해주세요")
@@ -90,38 +91,71 @@ class appScreen(QWidget):
         self.label.setFont(font)
 
         # button
-        self.KakaoTalkButton = Button(QPixmap("image/kakao.png"), 130)
-        self.WeChatButton = Button(QPixmap("image/wechat.png"), 130)
+        self.KakaoTalkButton = Button(QPixmap("image/kakao.png"), 130, self.showKakaoWindow)
+        self.WeChatButton = Button(QPixmap("image/wechat.png"), 130, self.showPurpleWindow)
         self.LysnButton = Button(QPixmap("image/lysn.png"), 130, self.showLysnWindow)
         self.TongTongButton = Button(QPixmap("image/tong.png"), 130, self.showTongTongWindow)
+        self.PurpleButton = Button(QPixmap("image/purple.png"), 130, self.showPurpleWindow)
         self.WickrButton = Button(QPixmap("image/wickr.png"), 130, self.showWickrWindow)
-
+        
         # 마우스 커서를 버튼 위에 올리면 모양 바꾸기
         self.KakaoTalkButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.WeChatButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.LysnButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.TongTongButton.setCursor(QCursor(Qt.PointingHandCursor))
+        self.PurpleButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.WickrButton.setCursor(QCursor(Qt.PointingHandCursor))
 
+        app1 = QLabel("KakaoTalk ")
+        app2 = QLabel("WeChat")
+        app3 = QLabel("Lysn")
+        app4 = QLabel("TongTong")
+        app5 = QLabel(" PurPle")
+        app6 = QLabel("  Wickr")
+        appname = [app1, app2, app3, app4, app5, app6]
+
+        font.setBold(False)
+        font.setPointSize(font.pointSize()-1)
+        for app in appname:
+            app.setFixedSize(130, 30)
+            app.setAlignment(Qt.AlignCenter)
+            app.setStyleSheet('color: rgb(55,48,46);')
+            app.setFont(font)
+            
         # 레이아웃2
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.KakaoTalkButton)
         hbox2.addWidget(self.WeChatButton)
         hbox2.addWidget(self.LysnButton)
         hbox2.addWidget(self.TongTongButton)
+        hbox2.addWidget(self.PurpleButton)
         hbox2.addWidget(self.WickrButton)
+        
         hbox2.setContentsMargins(20, 0, 20, 0)
         hbox2.setSpacing(15)
-
+        
+        # 레이아웃 3
+        hbox3 = QHBoxLayout()
+        hbox3.addWidget(app1)
+        hbox3.addWidget(app2)
+        hbox3.addWidget(app3)
+        hbox3.addWidget(app4)
+        hbox3.addWidget(app5)
+        hbox3.addWidget(app6)
+        
+        hbox3.setContentsMargins(20, 0, 20, 0)
+        hbox3.setSpacing(15)
+        
         layout2 = QVBoxLayout()
         layout2.addWidget(self.label)
         layout2.addLayout(hbox2)
+        layout2.addLayout(hbox3)
+        layout2.setSpacing(0)
 
         layout = QVBoxLayout()
         layout.addLayout(layout1)
         layout.addLayout(layout2)
         layout.setSpacing(50)
-
         self.setLayout(layout)
         self.center()
         self.show()
@@ -152,32 +186,26 @@ class appScreen(QWidget):
     # LysnWindow로 이동
     def showLysnWindow(self):
         reply = self.checkData('Lysn')
-
         if reply == 'Yes':
             LysnData(self.phoneNo)  # Lysn 데이터 추출
-            self.hide()  # hide main window
-            self.lysnWindow = LysnScreen(self.phoneNo)
-            self.lysnWindow.exec()
-            self.show()
         elif reply == 'Already_Exits_No':
-            self.hide()  # hide main window
-            self.lysnWindow = LysnScreen(self.phoneNo)
-            self.lysnWindow.exec()
-            self.show()
-        elif reply == 'back': # 동작 안함
+            pass
+        elif reply == 'Back': # 동작 안함
             return
 
-        #self.hide()  # hide main window
-        #self.lysnWindow = LysnScreen(self.phoneNo)
-        #self.lysnWindow.exec()
-        #self.show()
+        self.hide()  # hide main window
+        self.lysnWindow = LysnScreen(self.phoneNo)
+        self.lysnWindow.exec()
+        self.show()
 
     # TongTongWindow로 이동
     def showTongTongWindow(self):
         reply = self.checkData('TongTong')
         if reply == 'Yes':
-            TongTongData(self.phoneNo)  # Lysn 데이터 추출
-        elif reply == 'back': # 동작 안함
+            TongTongData(self.phoneNo)  # TongTong 데이터 추출
+        elif reply == 'Already_Exits_No':
+            pass
+        elif reply == 'Back': # 동작 안함
             return
 
         self.hide()  # hide main window
@@ -190,7 +218,9 @@ class appScreen(QWidget):
         reply = self.checkData('Wickr')
         if reply == 'Yes':
             WickrData(self.phoneNo)  # Wickr 데이터 추출
-        elif reply == 'back':
+        elif reply == 'Already_Exits_No':
+            pass
+        elif reply == 'Back':
             return
 
         self.hide()  # hide main window
@@ -198,17 +228,45 @@ class appScreen(QWidget):
         self.WickrWindow.exec()
         self.show()
 
+    # PurpleWindow로 이동
+    def showPurpleWindow(self):
+        reply = self.checkData('Purple')
+        if reply == 'Yes':
+            WickrData(self.phoneNo)  # Wickr 데이터 추출
+        elif reply == 'Already_Exits_No':
+            pass
+        elif reply == 'Back':
+            return
+
+        self.hide()  # hide main window
+        self.PurpleWindow = PurpleScreen(self.phoneNo)
+        self.PurpleWindow.exec()
+        self.show()
+
+    def showKakaoWindow(self):
+        reply = self.checkData('KakaoTalk')
+        if reply == 'Yes':
+            WickrData(self.phoneNo)  # Kakao 데이터 추출
+        elif reply == 'Already_Exits_No':
+            pass
+        elif reply == 'Back':
+            return
+
+        self.hide()  # hide main window
+        self.KakaoWindow = KakaoScreen(self.phoneNo)
+        self.KakaoWindow.exec()
+        self.show()
+
     def checkData(self, app):
 
         if os.path.exists(f'C:/AppData/{self.phoneNo}/{app}'):
             reply = QMessageBox.question(self, 'Message', f'이미 {app} 데이터가 존재합니다.\n{app} 데이터를 다시 추출하시겠습니까?',
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                         QMessageBox.Yes | QMessageBox.No | QMessageBox.Close , QMessageBox.Close)
 
             if reply == QMessageBox.No:
-                return 'Already_Exits_No'
+                return 'Already_Exists_No'
             elif reply == QMessageBox.Close:
-                print("close")
-                return 'back'
+                return 'Back'
             elif reply == QMessageBox.Yes:
                 try:
                     shutil.rmtree(f'C:/AppData/{self.phoneNo}/{app}/')
@@ -216,6 +274,8 @@ class appScreen(QWidget):
                     print('데이터 파일이 열려있습니다. 닫고 다시 실행해주세요.')
                 return 'Yes'
             return 'back'
+
+
 
         else:
             reply = QMessageBox.question(self, 'Message', f'{app} 데이터를 추출하시겠습니까?',
