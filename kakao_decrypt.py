@@ -78,7 +78,6 @@ def decrypt(user_id, b64_ciphertext):
     padded = Cipher.decrypt(ciphertext)
     plaintext = padded[:-padded[-1]]
     return plaintext.decode('UTF-8')
-    
 
 if __name__ == '__main__':
     content = 'AqxvJzJSZ6PZSR3nX+qDYw=='

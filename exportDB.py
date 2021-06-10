@@ -477,18 +477,18 @@ def kakaoConversation(row, colname, col_defs, compare=None, mediaPath=None):
 def wechat_db(path):
     app = 'Wechat'
 
-    dbfile = path + 'MicroMsg/' + wechat_path() + '/EnMicroMsg-dec.db'
-    # mediaPath = path + '/media'
+    dbfile = path + 'MicroMsg/' + wechat_path() + '/EnMicroMsg.db'
+    mediaPath = path + '/media'
     imei = wechat_imei()
     uin = wechat_ua()
     db = sqlcipher.connect(dbfile)
 
-    #db.execute('pragma key="' + wechat_en(uin, imei) + '"')
-    db.execute("pragma key = '30826b7';")
+    db.execute('pragma key="' + wechat_en(uin, imei) + '"')
+    db.execute('PRAGMA cipher_compatibility = 3')
     db.execute('PRAGMA cipher_use_hmac = OFF;')
     db.execute('PRAGMA cipher_page_size = 1024;')
     db.execute('PRAGMA kdf_iter = 4000;')
-    db.execute('PRAGMA cipher_use_kdf = OFF;' )
+
     cur = db.cursor()
 
     encolname = {'type': '파일타입', 'isSend': '수/발신', 'talker': '채팅방에 있는 유저ID', 'createTime': '보낸 시간', 'content': '메세지',

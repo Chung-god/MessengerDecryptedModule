@@ -12,11 +12,13 @@ from button import Button
 from videoWindow import video, image
 
 import os
+import copy
 
 class LysnScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
         # 초기화
+        self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
         self.userColnames, self.userRowlists, self.talkColnames, self.talkRowlists = [], [], [], []
@@ -52,10 +54,21 @@ class LysnScreen(QDialog):
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
 
+        self.backButton.setToolTip('뒤로가기')
+        self.searchButton.setToolTip('찾기 버튼\n단축키 : ctrl + f')
+        
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
         self.searchBox.returnPressed.connect(self.search_items)
+
+        # combo box user
+        self.userComboBox = QComboBox()
+        self.userComboBox.addItem("users")
+        self.userComboBox.addItem("sqlite_sequence")
+        self.userComboBox.setFixedWidth(100)
+        self.userComboBox.activated.connect(self.userComboEvent)
+        self.userComboBox.setToolTip('user.db의 tables')
 
         # combo box talk
         self.talkComboBox = QComboBox()
@@ -66,13 +79,16 @@ class LysnScreen(QDialog):
         self.talkComboBox.setFixedWidth(100)
         self.talkComboBox.activated.connect(self.talkComboEvent)
         self.talkComboBox.hide()
+        self.talkComboBox.setToolTip('talk.db의 tables')
 
-        # excel button
-        self.excelSaveButton = QPushButton(default=False, autoDefault=False)
-        self.excelSaveButton.setFixedWidth(100)
-        self.excelSaveButton.setText('Save as xls')
-        self.excelSaveButton.clicked.connect(self.excelButtonClicked)
-
+        # combo chat room
+        self.chatRoomComboBox = QComboBox()
+        for i in range(self.chatRoomLen):
+            self.chatRoomComboBox.addItem(self.chatRoomNum[i])
+        self.chatRoomComboBox.setFixedWidth(100)
+        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
+        self.chatRoomComboBox.hide()
+        self.chatRoomComboBox.setToolTip('Chat Room')
 
         # open combo box
         self.openComboBox = QComboBox()
@@ -80,16 +96,14 @@ class LysnScreen(QDialog):
         self.openComboBox.addItem("talk.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
-
-        # combo box user
-        self.userComboBox = QComboBox()
-        self.userComboBox.addItem("users")
-        self.userComboBox.addItem("sqlite_sequence")
-        self.userComboBox.setFixedWidth(100)
-        self.userComboBox.activated.connect(self.userComboEvent)
-
-        # close Button
-        # btn.clicked.connect(self.close)
+        self.openComboBox.setToolTip('Lysn 데이터베이스')
+        
+        # excel button
+        self.excelSaveButton = QPushButton(default=False, autoDefault=False)
+        self.excelSaveButton.setFixedWidth(100)
+        self.excelSaveButton.setText('Save as xls')
+        self.excelSaveButton.clicked.connect(self.excelButtonClicked)
+        self.excelSaveButton.setToolTip('현재 보고있는 표를 엑셀로 저장하는 버튼')
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
@@ -100,9 +114,9 @@ class LysnScreen(QDialog):
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.userComboBox)
         hbox2.addWidget(self.talkComboBox)
+        hbox2.addWidget(self.chatRoomComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
-
 
         layout = QVBoxLayout()
         layout.addLayout(hbox1)
@@ -186,14 +200,47 @@ class LysnScreen(QDialog):
 
     def talkComboEvent(self):
         if self.talkComboBox.currentText() == 'chats':
-            colname, rowlist = self.talkColnames[0], self.talkRowlists[0]
+            self.chatRoomComboBox.show()
+            colname, rowlist = self.userColnames[0], self.chatrowlists[0]
         elif self.talkComboBox.currentText() == 'rooms':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.talkColnames[1], self.talkRowlists[1]
         elif self.talkComboBox.currentText() == 'lastindex':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.talkColnames[2], self.talkRowlists[2]
         elif self.talkComboBox.currentText() == 'sqlite_sequence':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.talkColnames[3], self.talkRowlists[3]
 
+        self.showTable(colname, rowlist)
+
+    def chatroom(self):
+        self.talkColnames[0] = list(self.talkColnames[0])
+        self.talkColnames[0][2] = '받는사람'
+        self.chatrowlists = []
+        talkrowlist = self.talkRowlists[0]
+
+        for k in range(self.chatRoomLen):
+            crowlist = []
+            for i in range(len(self.talkRowlists[0])):
+                people = copy.deepcopy(self.chatRoomPeople[k])
+                if talkrowlist[i][2] == self.chatRoomNum[k]:
+                    if talkrowlist[i][1] in people:
+                        people.remove(talkrowlist[i][1])
+                    people=', '.join(people)
+                    talkrowlist[i][2] = people
+                    if people == '':
+                        talkrowlist[i][2] = talkrowlist[i][1]
+                    crowlist.append(talkrowlist[i])
+            
+            self.chatrowlists.append(crowlist)
+    
+    def chatRoomComboEvent(self):
+        colname = self.talkColnames[0]
+        for k in range(self.chatRoomLen):
+            if self.chatRoomComboBox.currentText() == self.chatRoomNum[k]:
+                rowlist = self.chatrowlists[k]
+        
         self.showTable(colname, rowlist)
 
     # android id 찾기
@@ -213,6 +260,13 @@ class LysnScreen(QDialog):
         android_id = self.findAndriodId()
         self.userColnames, self.userRowlists = lysn_userDB(self.path, android_id)
         self.talkColnames, self.talkRowlists = lysn_talkDB(self.path, android_id, self.userRowlists)
+
+        self.chatRoomLen = len(self.talkRowlists[1])
+        self.chatRoomNum = [self.talkRowlists[1][i][0] for i in range(self.chatRoomLen)]
+        self.chatRoomPeople = [self.talkRowlists[1][i][1].split(', ') for i in range(self.chatRoomLen)]
+        
+        self.chatroom() # 채팅방 별로 데이터 나누기
+        
         colname, rowlist = self.userColnames[0], self.userRowlists[0]
         self.f_name = "user_db"
         self.showTable(colname, rowlist)
@@ -223,6 +277,7 @@ class LysnScreen(QDialog):
         if self.openComboBox.currentText() == 'user.db':
             self.talkComboBox.hide()
             self.userComboBox.show()
+            self.chatRoomComboBox.hide()
             self.userComboBox.setCurrentIndex(0)
             colname, rowlist = self.userColnames[0], self.userRowlists[0]
             self.f_name = "user_db"
@@ -230,8 +285,10 @@ class LysnScreen(QDialog):
         elif self.openComboBox.currentText() == 'talk.db':
             self.userComboBox.hide()
             self.talkComboBox.show()
+            self.chatRoomComboBox.show()
             self.talkComboBox.setCurrentIndex(0)
-            colname, rowlist = self.talkColnames[0], self.talkRowlists[0]
+            self.chatRoomComboBox.setCurrentIndex(0)
+            colname,rowlist = self.talkColnames[0],self.chatrowlists[0]
             self.f_name = "talk_db"
 
         self.showTable(colname, rowlist)

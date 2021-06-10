@@ -13,16 +13,20 @@ from button import Button
 from videoWindow import video, image
 
 import os
+import copy
+
 class WickrScreen(QDialog):
     def __init__(self, phoneNo):
         super().__init__()
         # 초기화
+        self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
         self.wickrColnames, self.wickrRowlists = [], []
 
         self.phoneNo = phoneNo
         self.path = f'C:/AppData/{self.phoneNo}/Wickr/'
+
         self.setupUI()
 
     def setupUI(self):
@@ -51,6 +55,9 @@ class WickrScreen(QDialog):
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
 
+        self.backButton.setToolTip('뒤로가기')
+        self.searchButton.setToolTip('찾기 버튼\n단축키 : ctrl + f')
+
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
@@ -61,23 +68,31 @@ class WickrScreen(QDialog):
         self.excelSaveButton.setFixedWidth(100)
         self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
+        self.excelSaveButton.setToolTip('현재 보고있는 표를 엑셀로 저장하는 버튼')
 
         # open combo box
         self.openComboBox = QComboBox()
         self.openComboBox.addItem("wickr.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
+        self.openComboBox.setToolTip('Wickr의 데이터베이스')
 
         # combo box wickr
         self.wickrComboBox = QComboBox()
         self.wickrComboBox.addItem("Wickr_Message")
         self.wickrComboBox.addItem("Wickr_User")
+        self.wickrComboBox.addItem("Wickr_Convo")
         self.wickrComboBox.setFixedWidth(100)
         self.wickrComboBox.activated.connect(self.wickrComboEvent)
+        self.wickrComboBox.setToolTip('wickr.db의 Tables')
+
+        # combo chat room
+        self.chatRoomComboBox = QComboBox()
+        self.chatRoomComboBox.hide()
 
         self.password = QLabel()
         self.passerror = QLabel()
-
+        
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
         hbox1.addStretch(1)
@@ -86,6 +101,7 @@ class WickrScreen(QDialog):
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.wickrComboBox)
+        hbox2.addWidget(self.chatRoomComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.passerror)
         hbox2.addStretch(1)
@@ -102,8 +118,14 @@ class WickrScreen(QDialog):
 
         self.showDialog()
         
+        for i in range(self.chatRoomLen):
+            self.chatRoomComboBox.addItem(self.chatRoomNum[i])
+        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
+        self.chatRoomComboBox.setToolTip('Chat Room')
+        self.chatRoomComboBox.show()
+
     def showDialog(self):
-        text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :', QLineEdit.Password)
+        text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :', QLineEdit.Password, flags=(Qt.WindowTitleHint|Qt.WindowCloseButtonHint))
         
         if ok:
             self.password.setText(str(text))
@@ -163,7 +185,8 @@ class WickrScreen(QDialog):
                 item.setForeground(QBrush(Qt.white))
                 item.setFont(QFont("Helvetica", 9, QFont.Bold))
 
-        if self.searchBox.text() == "" and self.findField.text() != "":
+        if self.searchBox.text() == "" and self.on_off == 0:
+            reset(self, allitems)
             pass
 
         elif self.searchBox.text() == "":
@@ -176,18 +199,58 @@ class WickrScreen(QDialog):
     # table combo select
     def wickrComboEvent(self):
         if self.wickrComboBox.currentText() == 'Wickr_Message':
-            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
+            self.chatRoomComboBox.show()
+            colname, rowlist = self.wickrColnames[0], self.chatrowlists[0]
         elif self.wickrComboBox.currentText() == 'Wickr_User':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.wickrColnames[1], self.wickrRowlists[1]
+        elif self.wickrComboBox.currentText() == 'Wickr_Convo':
+            self.chatRoomComboBox.hide()
+            colname, rowlist = self.wickrColnames[2], self.wickrRowlists[2]
 
         self.showTable(colname, rowlist)
 
+    def chatroom(self):
+        self.wickrColnames[0] = list(self.wickrColnames[0])
+        self.wickrColnames[0][2] = '받는사람'
+        self.chatrowlists = []
+        talkrowlist = self.wickrRowlists[0]
+
+        for k in range(self.chatRoomLen):
+            crowlist = []
+            for i in range(len(self.wickrRowlists[0])):
+                people = copy.deepcopy(self.chatRoomPeople[k])
+                if talkrowlist[i][2] == self.chatRoomNum[k]:
+                    if talkrowlist[i][1] in people:
+                        people.remove(talkrowlist[i][1])
+                    people=', '.join(people)
+                    talkrowlist[i][2] = people
+                    crowlist.append(talkrowlist[i])
+            
+            self.chatrowlists.append(crowlist)
+    
+    def chatRoomComboEvent(self):
+        
+        colname = self.wickrColnames[0]
+        for k in range(self.chatRoomLen):
+            if self.chatRoomComboBox.currentText() == self.chatRoomNum[k]:
+                rowlist = self.chatrowlists[k]
+        
+        self.showTable(colname, rowlist)
+
     def wickrData(self):
-        #password = 'k2185717'
         try:
             self.wickrColnames, self.wickrRowlists = wickrDB(self.path, self.password.text())
-            colname, rowlist = self.wickrColnames[0], self.wickrRowlists[0]
-            self.f_name = "user_db"
+        
+            self.chatRoomLen = len(self.wickrRowlists[2])
+            self.chatRoomNum = [self.wickrRowlists[2][i][0] for i in range(self.chatRoomLen)]
+            self.chatRoomPeople = [self.wickrRowlists[2][i][1].split(', ') for i in range(self.chatRoomLen)]
+
+            self.chatroom()
+
+            colname, rowlist = self.wickrColnames[0], self.chatrowlists[0]
+
+            self.f_name = "wickr_db"
             self.showTable(colname, rowlist)
             self.passerror.hide()
         except:
