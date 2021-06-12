@@ -259,6 +259,7 @@ class appScreen(QWidget):
             return
 
         self.path = f'{self.path}/{self.appName}/'
+
         self.hide()  # hide main window
         self.PurpleWindow = PurpleScreen(self.path)
         self.PurpleWindow.exec()

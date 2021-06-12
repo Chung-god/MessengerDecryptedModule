@@ -5,13 +5,14 @@ import datetime
 import time
 import json
 import xml.etree.ElementTree as elemTree
-from requests import get
+import urllib.request
 
 from lysn_key import userDB_key, talkDB_key
 from tong_decrypt import tong_dec
 from wickr_decrypt import wickrDB_key, wickr_media
 from kakao_decrypt import decrypt
 from purple_decrypt import purple_dec
+from wechat_key import wechat_en, wechat_path, wechat_ua, wechat_imei
 
 # lysn user.db 내용 추출 
 def lysn_userDB(path, android_id):
@@ -421,8 +422,7 @@ def purpleConversation(row, colname, col_defs, compare, path):
                 try:
                     value = path + 'purpleMedia/' + iname
                     with open(value, 'wb') as file:
-                        response = get(imageUrl)
-                        file.write(response.content)
+                        file.write(request.urlopen(imageUrl).read())
                 except:
                     value = path + 'purpleMedia/' + iname
 
@@ -430,56 +430,202 @@ def purpleConversation(row, colname, col_defs, compare, path):
 
     return d_row
 
-def KaKaoTalk_DB_1(path):
-    app = 'KakaoTalk'
-
-    # db 열기
-    dbfile = path + 'databases/KakaoTalk.db'
-    db = sqlcipher.connect(dbfile)
-    cur = db.cursor()
-
-    chat_logsColname = {'message' : '메시지','user_id':'보낸 사람', 'created_at' : '생성'}
-    chat_logsRowlist = export(app, cur, 'chat_logs', chat_logsColname)  
-    
-    # KakaoTalk.db에 chat_logs 테이블 내용 추출
-    colname = [chat_logsColname.values()]
-    rowlist = [chat_logsRowlist]
-    
-    return colname, rowlist
 
 def KaKaoTalk_DB_2(path):
     app = 'KakaoTalk'
 
     #db 열기
     dbfile = path + 'databases/KakaoTalk2.db'
+    os.makedirs(path+'kakaoMedia', exist_ok=True)
+
     db = sqlcipher.connect(dbfile)
     cur = db.cursor()
 
-    friendsColname = {'id' : '아이디', 'name' : '사용자'}
-    friendsRowlist = export(app, cur, 'friends', friendsColname) 
+    friendsColname = {'myID':'내 ID', 'id':'사용자 ID','name':'이름','nick_name':'닉네임','phone_number':'핸드폰 번호','status_message':'상태메시지','original_profile_image_url':'프로필 이미지'}
+    friendsRowlist = export(app, cur, 'friends', friendsColname, None, path)  # gcm.db에 chatting 테이블 내용 추출
 
     colname = [friendsColname.values()]
     rowlist = [friendsRowlist]
 
     return colname, rowlist
     
-def kakaoConversation(row, colname, col_defs, compare=None, mediaPath=None):
+def KaKaoTalk_DB_1(path, rowlist):
+    app = 'KakaoTalk'
+    ulists = rowlist[0]
+
+    # db 열기
+    dbfile = path + 'databases/KakaoTalk.db'
+    db = sqlcipher.connect(dbfile)
+    cur = db.cursor()
+
+    # 테이블 추출할 내용 지정
+    # chat_logs
+    chattingColname = {'created_at':'시간', 'user_id':'사용자 ID', 'chat_id':'채팅방 ID', 'type':'타입', 'message':'메시지', 'attachment':'파일', 'id':'채팅 ID'}
+    chattingRowlist = export(app, cur, 'chat_logs', chattingColname, ulists, path)  
+
+    # chat_rooms
+    roomColname = {'id':'채팅방 id','private_meta':'채팅방 이름','members':'채팅방 인원','last_updated_at':'시간','last_log_id':'마지막 보낸사람','type':'채팅 타입','last_message':'마지막 보낸 메시지'}
+    roomRowlist = export(app, cur, 'chat_rooms', roomColname, [ulists, chattingRowlist], path)  
+
+    # KakaoTalk.db에 chat_logs 테이블 내용 추출
+    colname = [chattingColname.values(), roomColname.values()]
+    rowlist = [chattingRowlist, roomRowlist]
+
+    return colname, rowlist
+
+def kakaoConversation(row, colname, col_defs, compare, path):
     d_row = []
-    flag=0
+    msg = ''
+    tp = {'0':'invited message', '1':'text message', '2':'photo', '3':'video', '4':'send contact', '5':'voice note', '9':'PC login message', '12':'dynamic emoticon', '16':'location', '17':'send KaKao Talk Profile','18':'file sharing','20':'imoticon','24':'notice','26':'reply','51':'vocie calling','71':'device'}
+
+    for en, kr in colname.items():
+        if en == 'myID':
+            myID = compare
+            value = compare
+        else:
+            value = row[col_defs[en]]
+        if value == None or value == '{}':
+            value = ''
+
+        if (en == 'phone_number' or en == 'name' or en == 'original_profile_image_url' or en == 'status_message' or en == 'nick_name') and value != '':
+            value = decrypt(myID, value) # 자신의 userid 사용하는 복호화
+        elif en == 'user_id':
+            userId = value
+            for ulist in compare: # id를 이름으로 변환
+                if value == ulist[1]:
+                    value = ulist[2]
+                    break
+        elif kr == '타입':
+            types = value
+            for k in tp.keys():
+                if k == str(value):
+                    value = tp[k]
+        elif en == 'message' and value != '': # 메시지 복호화
+            value = decrypt(userId, value)
+        elif en == 'attachment' and value != '':
+            media_dic = decrypt(userId, value) # 미디어 복호화
+            media_dic = json.loads(media_dic) # url 추출
+            if isinstance(media_dic, dict) == True:
+                if types == 2 or types == 3 or types == 18:
+                    value = media_dic['url']
+                elif types == 26:
+                    tname = media_dic['src_userId']
+                    tmsg = media_dic['src_message']
+                    for ulist in compare:
+                        if tname == ulist[1]:
+                            tname = ulist[2]
+                            break 
+                    value = f"[{str(tname)}에게 답장]\n{tmsg}"
+                else:
+                    value = ''
+
+        elif en == 'private_meta' and value != '': # 채팅방 이름
+            value = json.loads(value)
+            value = value['name']
+        elif en == 'created_at' and value != '':
+            value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')               
+        elif en == 'members':
+            value = json.loads(value)
+            value.append(compare[0][0][0])
+            for i in range(len(value)):
+                for ulist in compare[0]:
+                    if value[i] == ulist[1]:
+                        value[i] = ulist[2]
+            value = ', '.join(value)    
+        elif en == 'last_log_id':
+            for clist in compare[1]:
+                if clist[6] == value:
+                    value = clist[1]
+                    msg = clist[4]
+        elif en == 'last_message':
+            value = msg          
+        d_row.append(value)
+        
+    return d_row  
+
+
+def wechat_db(path):
+    app = 'Wechat'
+
+    dbfile = path + 'MicroMsg/' + wechat_path() + '/EnMicroMsg.db'
+    print(dbfile)
+    # mediaPath = path + '/media'
+    #imei = wechat_imei()
+    #uin = wechat_ua()
+    
+    UIN = '-1995855133'.encode()
+    IMEI = '358534060102270'.encode()
+    
+    db = sqlcipher.connect(dbfile)
+    KEY = wechat_en(UIN, IMEI)
+    
+    db.execute('pragma key="' + KEY + '"')
+    db.execute('PRAGMA cipher_compatibility = 3')
+    #db.execute("pragma key = '30826b7';")
+    db.execute('PRAGMA cipher_use_hmac = off')
+    db.execute('PRAGMA cipher_page_size = 1024')
+    db.execute('PRAGMA kdf_iter = 4000')
+    db.execute('PRAGMA cipher_use_kdf = off' )
+    cur = db.cursor()
+
+    encolname = {'type': '파일타입', 'isSend': '수/발신', 'talker': '채팅방에 있는 유저ID', 'createTime': '보낸 시간', 'content': '메세지',
+                 'imgPath': '이미지'}
+    enrowlist = export(app, cur, 'message', encolname)
+
+    colname = [encolname.values()]
+    rowlist = [enrowlist]
+
+    return colname, rowlist
+
+
+def wechatConversation(row, colname, col_defs, compare, mediaPath):
+    d_row = []
     for en, kr in colname.items():
         value = row[col_defs[en]]
-            
-        if en == 'message' and value != '':
-            enc_msg = value
-            flag = 1
-        elif en == 'user_id' and value != '':
-            xid = value
+
+        if kr == '파일타입':
+            if value == 1:
+                value = '메세지'
+            elif value == 3:
+                value = '사진'
+            elif value == 43:
+                value = '영상'
+            elif value == 34:
+                value = '음성 메세지'
+            elif value == 10000:
+                value = '시스템 공지'
+            else:
+                pass
+
+        elif kr == '수/발신':
+            if value == 0:
+                value = '수신'
+            elif value == 1:
+                value = '발신'
+            else:
+                pass
+
+        elif kr == '보낸 시간':
+            unixTimestamp = value / 1000
+            value = datetime.fromtimestamp(int(unixTimestamp))
+
+
+        elif kr == '메세지':
+            if value == None or len(value) >= 200:
+                value = ''
+            elif 'wxid' in value:
+                value = '미디어 파일'
+                pass
+
+        elif kr == '이미지':
+            if value == None:
+                value = ''
+            else:
+                pass
         d_row.append(value)
 
-    if flag == 1:
-        d_row[0] = decrypt(xid, enc_msg)
+    return d_row
 
-    return d_row  
 
 # Lysn, TongTong 내용 추출하기
 def export(app, cur, table, colname, compare=None, mediaPath=None):
@@ -497,11 +643,20 @@ def export(app, cur, table, colname, compare=None, mediaPath=None):
         rowlist = [tongtongConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
     elif app == 'Wickr':
         rowlist = [WickrConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
-    elif app == 'KakaoTalk':
-        rowlist = [kakaoConversation(row,colname,col_defs,mediaPath) for row in rows]
     elif app == 'Purple':
         rowlist = [purpleConversation(row, colname, col_defs, compare, mediaPath) for row in rows]
-
+    elif app == 'KakaoTalk':
+        if table == 'friends':
+            # 자신의 userid 찾기
+            for i in range(len(rows)):
+                dec = decrypt(rows[i][2],rows[i][7])
+                if dec != '':
+                    myID = rows[i][2]
+                    break
+            rowlist = [kakaoConversation(row,colname,col_defs,myID,mediaPath) for row in rows]
+        else:
+            rowlist = [kakaoConversation(row,colname,col_defs,compare,mediaPath) for row in rows]
+    
     return rowlist
 
 
@@ -527,7 +682,7 @@ if __name__ == '__main__':
     print(colnames[0])
     for row in rowlists[0]:
         print(row)
-    '''
+    
     
     path = "C:/AppData/SM-G955N/KakaoTalk/"
     colnames, rowlists = KaKaoTalk_DB_1(path)
@@ -536,7 +691,7 @@ if __name__ == '__main__':
     for row in rowlists[0]:
         print(row)
     
-    '''
+    
     path = "C:/AppData/SM-G955N/W/"
     password = 'dltndk11@@'
     colnames, rowlists = wickrDB(path, password)
@@ -553,3 +708,13 @@ if __name__ == '__main__':
     for row in rowlists[1]:
         print(row)
     '''
+    #path = "C:/AppData/SM-G955N/KakaoTalk/"
+    path = 'C:/MDTool/SM-G925S/20210613-KakaoTalk-001/KakaoTalk/'
+    
+    colnames, rowlists = KaKaoTalk_DB_2(path)
+    #colnames, rowlists = KaKaoTalk_DB_1(path, rowlists)
+    
+    print(colnames[0])
+    
+    for row in rowlists[0]:
+        print(row)

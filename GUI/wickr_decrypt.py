@@ -9,7 +9,6 @@ def wickrDB_key(skdata, password):
     gcm_nonce = skdata[18:30]
     gcm_tag = skdata[30:46]
     ciphertext = skdata[46:]
-
     K = scrypt(password, salt, N=131072, r=8, p=1, key_len=32)
 
     Cipher = AES.new(K, AES.MODE_GCM, nonce=gcm_nonce)
@@ -32,11 +31,11 @@ def wickr_media(mdk, mediaPath):
     return dec
     
 '''
-f=open('wickr/sk.wic', 'rb+')
+f=open('C:/MDTool/SM-G955N/20210612-Wickr-001/Wickr/files/sk.wic', 'rb+')
 data=f.read()
 f.close()
-
-password = ''
+print(data)
+password = 'dltndk11@@'
 
 dbpass = wickrDB_key(data, password)
 print(dbpass)

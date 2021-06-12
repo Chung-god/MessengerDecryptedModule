@@ -424,6 +424,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
-    path = 'C:/MDTool/SM-G955N/20210611-Lysn-001/Lysn/'
+    path = 'C:/MDTool/SM-G955N/20210612-Lysn-001/Lysn/'
     ui = LysnScreen(path)
     sys.exit(app.exec_())

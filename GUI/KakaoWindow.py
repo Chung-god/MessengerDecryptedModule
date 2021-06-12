@@ -6,20 +6,23 @@ from PyQt5.QtCore import *
 from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
 
-from exportDB import *
+from exportDB import KaKaoTalk_DB_1, KaKaoTalk_DB_2
 from button import Button
+from videoWindow import video, image
 
-
+import os
+import copy
+import urllib.request
 class KakaoScreen(QDialog):
     def __init__(self, path):
         super().__init__()
         # 초기화
+        self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
         self.kakaoColnames, self.kakaoRowlists, self.kakao2Colnames, self.kakao2Rowlists = [], [], [], []
 
         self.path = path
-
         self.kakaoData()  # 미리 kakaotalk 데이터 모두 가져오기
         self.setupUI()
 
@@ -49,23 +52,20 @@ class KakaoScreen(QDialog):
         self.backButton.setCursor(QCursor(Qt.PointingHandCursor))
         self.searchButton.setCursor(QCursor(Qt.PointingHandCursor))
 
+        self.backButton.setToolTip('뒤로가기')
+        self.searchButton.setToolTip('찾기 버튼\n단축키 : ctrl + f')
+
         # search text
         self.searchBox = QtWidgets.QLineEdit()
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
         self.searchBox.returnPressed.connect(self.search_items)
-
-        # combo box name => db2
-        self.kakao2ComboBox = QComboBox()
-        self.kakao2ComboBox.addItem("friends")
-        self.kakao2ComboBox.setFixedWidth(100)
-        self.kakao2ComboBox.activated.connect(self.kakao2ComboEvent)
-        self.kakao2ComboBox.hide()
 
         # excel button
         self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
         self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
+        self.excelSaveButton.setToolTip('현재 보고있는 표를 엑셀로 저장하는 버튼')
 
         # open combo box
         self.openComboBox = QComboBox()
@@ -73,12 +73,30 @@ class KakaoScreen(QDialog):
         self.openComboBox.addItem("KakaoTalk2.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
-        
+        self.openComboBox.setToolTip('KakaoTalk 데이터베이스')
+
         # combo box mes => db1
         self.kakaoComboBox = QComboBox()
         self.kakaoComboBox.addItem("chat_logs")
+        self.kakaoComboBox.addItem("chat_rooms")
         self.kakaoComboBox.setFixedWidth(100)
         self.kakaoComboBox.activated.connect(self.kakaoComboEvent)
+        self.kakaoComboBox.setToolTip('KakaoTalk.db의 tables')
+
+        # combo box name => db2
+        self.kakao2ComboBox = QComboBox()
+        self.kakao2ComboBox.addItem("friends")
+        self.kakao2ComboBox.setFixedWidth(100)
+        self.kakao2ComboBox.activated.connect(self.kakao2ComboEvent)
+        self.kakao2ComboBox.hide()
+        self.kakao2ComboBox.setToolTip('KakaoTalk2.db의 tables')
+
+        # combo chat room
+        self.chatRoomComboBox = QComboBox()
+        for i in range(self.chatRoomLen):
+            self.chatRoomComboBox.addItem((self.chatRoomName[i]))
+        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
+        self.chatRoomComboBox.setToolTip('Chat Room')
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
@@ -89,6 +107,7 @@ class KakaoScreen(QDialog):
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.kakaoComboBox)
         hbox2.addWidget(self.kakao2ComboBox)
+        hbox2.addWidget(self.chatRoomComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
         layout = QVBoxLayout()
@@ -122,7 +141,6 @@ class KakaoScreen(QDialog):
 
     # search box
     def search_items(self):
-
         # rest font
         def reset(self, items):
             for item in items:
@@ -132,14 +150,12 @@ class KakaoScreen(QDialog):
                     item.setBackground(QBrush(Qt.white))
                     item.setForeground(QBrush(Qt.black))
                     item.setFont(QFont())
-
         if self.on_off == 0:
             text = self.searchBox.text()
             selected_items = self.tableWidget.findItems(self.searchBox.text(), QtCore.Qt.MatchContains)
         else:
             text = self.findField.text()
             selected_items = self.tableWidget.findItems(self.findField.text(), QtCore.Qt.MatchContains)
-
         allitems = self.tableWidget.findItems("", QtCore.Qt.MatchContains)
 
         # reset
@@ -154,7 +170,6 @@ class KakaoScreen(QDialog):
 
         if self.searchBox.text() == "" and self.findField.text() != "":
             pass
-
         elif self.searchBox.text() == "":
             reset(self, allitems)
             print("sb None")
@@ -165,8 +180,12 @@ class KakaoScreen(QDialog):
     # table combo select
     def kakaoComboEvent(self):
         if self.kakaoComboBox.currentText() == 'chat_logs':
-            colname, rowlist = self.kakaoColnames[0], self.kakaoRowlists[0]
-
+            self.chatRoomComboBox.show()
+            colname, rowlist = self.kakaoColnames[0], self.chatrowlists[0]
+        elif self.kakaoComboBox.currentText() == 'chat_rooms':
+            self.chatRoomComboBox.hide()
+            colname, rowlist = self.kakaoColnames[1], self.kakaoRowlists[1]
+        
         self.showTable(colname, rowlist)
 
     def kakao2ComboEvent(self):
@@ -175,11 +194,60 @@ class KakaoScreen(QDialog):
 
         self.showTable(colname, rowlist)
 
+    def chatroom(self):
+        self.kakaoColnames[0] = list(self.kakaoColnames[0])
+        self.kakaoColnames[0][2] = '받는사람'
+        self.chatrowlists = []
+        talkrowlist = self.kakaoRowlists[0]
+
+        for k in range(self.chatRoomLen):
+            crowlist = []
+            for i in range(len(self.kakaoRowlists[0])):
+                people = copy.deepcopy(self.chatRoomPeople[k])
+                if talkrowlist[i][2] == self.chatRoomNum[k]:
+                    if talkrowlist[i][1] in people:
+                        people.remove(talkrowlist[i][1])
+                    people=', '.join(people)
+                    talkrowlist[i][2] = people
+                    if people == '':
+                        talkrowlist[i][2] = talkrowlist[i][1]
+                    crowlist.append(talkrowlist[i])
+            
+            self.chatrowlists.append(crowlist)
+
+    def chatRoomComboEvent(self):
+        colname = self.kakaoColnames[0]
+        for k in range(self.chatRoomLen):
+            if self.chatRoomComboBox.currentText() == self.chatRoomName[k]:
+                rowlist = self.chatrowlists[k]
+        
+        self.showTable(colname, rowlist)
+
     def kakaoData(self):
-        self.kakaoColnames, self.kakaoRowlists = KaKaoTalk_DB_1(self.path)
         self.kakao2Colnames, self.kakao2Rowlists = KaKaoTalk_DB_2(self.path)
-        colname, rowlist = self.kakaoColnames[0], self.kakaoRowlists[0]
-        self.f_name = "KakaoTalk_db" #이게 뭘 뜻하는지 찾아볼 것
+        self.kakaoColnames, self.kakaoRowlists = KaKaoTalk_DB_1(self.path, self.kakao2Rowlists)
+        
+        for i in range(len(self.kakaoRowlists[0])):
+            del self.kakaoRowlists[0][i][-1]
+        self.kakaoColnames[0] = list(self.kakaoColnames[0])
+        del self.kakaoColnames[0][-1]
+
+        self.chatRoomLen = len(self.kakaoRowlists[1])
+        self.chatRoomNum,self.chatRoomPeople,self.chatRoomName=[],[],[]
+        for CR in self.kakaoRowlists[1]:
+            self.chatRoomNum.append(CR[0])
+            CS = CR[2].split(', ')
+            self.chatRoomPeople.append(CS)
+            if CR[1] == '':
+                if len(CS) > 3: self.chatRoomName.append(', '.join(CS[:3]) + f' 외 {len(CS)}명')
+                else: self.chatRoomName.append(CR[2])
+            else: self.chatRoomName.append(CR[1])
+        
+        self.chatroom()
+    
+        colname, rowlist = self.kakaoColnames[0], self.chatrowlists[0]
+
+        self.f_name = "KakaoTalk_db"
         self.showTable(colname, rowlist)
 
     # DB 버튼 클릭 시
@@ -221,32 +289,52 @@ class KakaoScreen(QDialog):
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
 
-        media = -1
+        media, profile, types = -1, -1, -1
         for m in range(len(colname)):
             if list(colname)[m] == '파일':
                 media = m
-
+            if list(colname)[m] == '프로필 이미지':
+                profile = m
+            if list(colname)[m] == '타입':
+                types = m
+            
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
-                if j == media:
-                    item = self.getImageLabel(rowlist[i][j])
-                    self.tableWidget.setCellWidget(i, j, item)
-                else:
+                if ((j == media and rowlist[i][types] != 'reply') or j == profile) and rowlist[i][j] != '':
+                    if j == media: tp = rowlist[i][types]
+                    else: tp = 'photo'
+
+                    if tp == 'photo':
+                        mpath = 'image/image.png'
+                    elif tp == 'file sharing':
+                        mpath = 'image/files.png'
+                    elif tp == 'video':
+                        mpath = 'image/video.png'
+                    else:
+                        mpath = 'image/noimage.png'
+                    
+                    self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
+                    self.btn1.setText(rowlist[i][j])
+                    self.tableWidget.setCellWidget(i, j, self.btn1)
+                else:  # 텍스트
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
                     self.tableWidget.setItem(i, j, item)
-        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
+        self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname
         self.rowlist = rowlist
 
-    def getImageLabel(self, image):
-        imageLabel = QLabel()
-        imageLabel.setScaledContents(True)
-        pixmap = QPixmap()
-        pixmap.loadFromData(image, 'jpg')
-        imageLabel.setPixmap(pixmap)
-        return imageLabel
+    def imageWindow(self):
+        imageUrl = self.sender().text()
+        iname = imageUrl.split('/')[-1]
+        mediaPath = self.path + 'kakaoMedia/' + iname
+        try:
+            if not os.path.exists(mediaPath):
+                urllib.request.urlretrieve(imageUrl, mediaPath)
+        except:
+            mediaPath = 'image/noimage.png'
+        image(mediaPath)
 
     def center(self):
         frame_info = self.frameGeometry()
@@ -304,6 +392,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion'))  # --> 없으면, 헤더색 변경 안됨.
-    path = 'C:/MDTool/SM-G955N/20210611-KakaoTalk-001/KakaoTalk/'
+    path = 'C:/MDTool/SM-G925S/20210613-KakaoTalk-1/KakaoTalk/'
     ui = KakaoScreen(path)
     sys.exit(app.exec_())

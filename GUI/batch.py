@@ -23,10 +23,8 @@ def TongTongData(appPath):
 
 def KakaoTalkData(appPath):
     moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
-    if os.path.exists('/sdcard/KakaoTalk'):
-        subprocess.call(moveadb+' && adb shell rm -rf /sdcard/KakaoTalk', shell=True)
-    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.kakao.talk/ /sdcard/KakaoTalk"', shell=True)
-    subprocess.call(moveadb+' && adb shell "su root cp -r /sdcard/Android/data/com.kakao.talk/cache/ /sdcard/KakaoTalk/KakaoTalkMedia"', shell=True)
+    subprocess.call(moveadb+' && adb shell rm -rf /sdcard/KakaoTalk', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.kakao.talk /sdcard/KakaoTalk"', shell=True)
     subprocess.call(moveadb+f' && adb pull /sdcard/KakaoTalk {appPath}', shell=True)
     subprocess.call(moveadb+' && adb shell rm -rf /sdcard/KakaoTalk', shell=True)
 
@@ -34,7 +32,7 @@ def WickrData(appPath):
     moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
     if os.path.exists('/sdcard/Wickr'):
         subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Wickr', shell=True)
-    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2/ /sdcard/Wickr"', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2 /sdcard/Wickr"', shell=True)
     subprocess.call(moveadb+f' && adb pull /sdcard/Wickr {appPath}', shell=True)
     subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Wickr', shell=True)
 
@@ -42,6 +40,6 @@ def PurpleData(appPath):
     moveadb = 'cd C:\\Program Files (x86)\\Nox\\bin'
     if os.path.exists('/sdcard/Purple'):
         subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Purple', shell=True)
-    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2/ /sdcard/Wickr"', shell=True)
+    subprocess.call(moveadb+' && adb shell "su root cp -r /data/data/com.mywickr.wickr2 /sdcard/Wickr"', shell=True)
     subprocess.call(moveadb+f' && adb pull /sdcard/Purple {appPath}', shell=True)
     subprocess.call(moveadb+' && adb shell rm -rf /sdcard/Purple', shell=True)
