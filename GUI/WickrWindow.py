@@ -16,7 +16,7 @@ import os
 import copy
 
 class WickrScreen(QDialog):
-    def __init__(self, phoneNo):
+    def __init__(self, path):
         super().__init__()
         # 초기화
         self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
@@ -24,9 +24,7 @@ class WickrScreen(QDialog):
         self.on_off, self.f_name = 0, ''
         self.wickrColnames, self.wickrRowlists = [], []
 
-        self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/Wickr/'
-
+        self.path = path
         self.setupUI()
 
     def setupUI(self):
@@ -392,6 +390,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
-    phoneNo = 'SM-G955N'
-    ui = WickrScreen(phoneNo)
+    path = 'C:/MDTool/SM-G955N/20210611-Wickr-001/Wickr/'
+    ui = WickrScreen(path)
     sys.exit(app.exec_())

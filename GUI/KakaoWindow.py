@@ -11,16 +11,15 @@ from button import Button
 
 
 class KakaoScreen(QDialog):
-    def __init__(self, phoneNo):
+    def __init__(self, path):
         super().__init__()
         # 초기화
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
         self.kakaoColnames, self.kakaoRowlists, self.kakao2Colnames, self.kakao2Rowlists = [], [], [], []
 
-        self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/KakaoTalk/'
-        
+        self.path = path
+
         self.kakaoData()  # 미리 kakaotalk 데이터 모두 가져오기
         self.setupUI()
 
@@ -305,6 +304,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion'))  # --> 없으면, 헤더색 변경 안됨.
-    phoneNo = 'SM-N976N'
-    ui = KakaoScreen(phoneNo)
+    path = 'C:/MDTool/SM-G955N/20210611-KakaoTalk-001/KakaoTalk/'
+    ui = KakaoScreen(path)
     sys.exit(app.exec_())

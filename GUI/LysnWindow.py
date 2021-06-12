@@ -15,7 +15,7 @@ import os
 import copy
 
 class LysnScreen(QDialog):
-    def __init__(self, phoneNo):
+    def __init__(self, path):
         super().__init__()
         # 초기화
         self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
@@ -23,8 +23,7 @@ class LysnScreen(QDialog):
         self.on_off, self.f_name = 0, ''
         self.userColnames, self.userRowlists, self.talkColnames, self.talkRowlists = [], [], [], []
 
-        self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/Lysn/'
+        self.path = path
         self.lysnData()  # 미리 Lysn 데이터 모두 가져오기
         self.setupUI()
 
@@ -425,6 +424,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
-    phoneNo = 'SM-G955N'
-    ui = LysnScreen(phoneNo)
+    path = 'C:/MDTool/SM-G955N/20210611-Lysn-001/Lysn/'
+    ui = LysnScreen(path)
     sys.exit(app.exec_())

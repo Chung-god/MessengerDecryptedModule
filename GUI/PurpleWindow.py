@@ -14,7 +14,7 @@ import os
 import copy
 
 class PurpleScreen(QDialog):
-    def __init__(self, phoneNo):
+    def __init__(self, path):
         super().__init__()
         # 초기화
         self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
@@ -22,8 +22,7 @@ class PurpleScreen(QDialog):
         self.on_off, self.f_name = 0, ''
         self.userColnames, self.userRowlists, self.talkColnames, self.talkRowlists = [], [], [], []
 
-        self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/Purple/'
+        self.path = path
         self.PurpleData()  # 미리 Purple 데이터 모두 가져오기
         self.setupUI()
 
@@ -337,6 +336,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion'))  # --> 없으면, 헤더색 변경 안됨.
-    phoneNo = 'SM-G955N'
-    ui = PurpleScreen(phoneNo)
+    path = 'C:/MDTool/SM-G955N/20210611-PurPle-001/PurPle/'
+    ui = PurpleScreen(path)
     sys.exit(app.exec_())

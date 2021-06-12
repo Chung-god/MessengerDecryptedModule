@@ -83,8 +83,9 @@ def lysnConversation(row, colname, col_defs, compare, path):
     d_row=[]
     for en, kr in colname.items():
         value = row[col_defs[en]]
+        if value == None: value = ''
         # 시간 변환
-        if kr == '시간' and value != None:
+        if kr == '시간' and value != '':
             value = "20"+str(str(value[0:2])+"-" + str(value[2:4])+"-" 
             + str(value[4:6])+" " + str(value[6:8])+":" + str(value[8:10])+":" + str(value[10:12]))
         # 이름 변환
@@ -122,7 +123,7 @@ def tongtong_gcmDB(path):
 
     # chatting
     chattingColname = {'date':'시간', 'userId':'유저 고유 아이디', 'name':'보낸사람', 'roomKey':'채팅방 번호', 
-                        'msgType':'타입', 'msg':'메시지', 'thumbnailPath':'사진', 'videoPath':'비디오'}
+                        'msgType':'타입', 'msg':'메시지', 'thumbnailPath':'미디어', 'originalPath':'원본사진', 'videoPath':'비디오'}
     chattingRowlist = export(app, cur, 'chatting', chattingColname, roomRowlist, path)  # gcm.db에 chatting 테이블 내용 추출
 
     # friend
@@ -138,6 +139,7 @@ def tongtong_gcmDB(path):
 # TongTong data 변환
 def tongtongConversation(row, colname, col_defs, compare, path):
     d_row = []
+    oimage = ''
     for en, kr in colname.items():
         value = row[col_defs[en]]
         if value == None: value = ''
@@ -155,12 +157,18 @@ def tongtongConversation(row, colname, col_defs, compare, path):
             else: value = 'etc'
 
         # 미디어 파일 추출
-        elif kr == '사진' and value != '':
-            s=value.split('/')
-            value=path+'TongMedia/'+s[-2]+'/'+s[-1]
-        elif kr == '비디오' and value != '':
-            s=value.split('/')
-            value=path+'TongVideo/'+s[-2]+'/'+s[-1]
+        elif kr == '미디어' and value != '':
+            s = '/'.join(value.split('/')[-3:])
+            value = path + 'TongMedia/' + s
+        elif kr == '원본사진':
+            oimage = value
+        elif kr == '비디오':
+            if value == '' and oimage != '':
+                s = oimage.split('/')[-1]
+                value = path + 'TongVideo/download/tongtong_' + s
+            elif value != '':
+                s = '/'.join(value.split('/')[-3:])
+                value = path + 'TongVideo/' + s
         elif en == 'roomName':
             roomName = value
         elif en == 'member':
@@ -501,8 +509,8 @@ if __name__ == '__main__':
     
     '''
     path = "C:/AppData/SM-G955N/Lysn/"
-    android_id = '4b0629381a2249a5'
-    #android_id = '4f77d977f3f1c488' 
+    #android_id = '4b0629381a2249a5'
+    android_id = '4f77d977f3f1c488' 
     colnames, rowlists = lysn_userDB(path, android_id)
     colnames, rowlists = lysn_talkDB(path, android_id,rowlists)
     
@@ -512,13 +520,14 @@ if __name__ == '__main__':
         print(row)
     
     
-    path = "C:/AppData/SM-G955N/TongTong/"
+    path = "C:/MDTool/SM-G955N/20210612-TongTong-001/TongTong/"
+    path = 'C:/AppData/SM-G955N/TongTong2/'
     colnames, rowlists = tongtong_gcmDB(path)
     
     print(colnames[0])
     for row in rowlists[0]:
         print(row)
-    
+    '''
     
     path = "C:/AppData/SM-G955N/KakaoTalk/"
     colnames, rowlists = KaKaoTalk_DB_1(path)
@@ -527,7 +536,7 @@ if __name__ == '__main__':
     for row in rowlists[0]:
         print(row)
     
-    
+    '''
     path = "C:/AppData/SM-G955N/W/"
     password = 'dltndk11@@'
     colnames, rowlists = wickrDB(path, password)
@@ -535,12 +544,12 @@ if __name__ == '__main__':
     print(colnames[0])
     for row in rowlists[0]:
         print(row)
-    '''
-
+    
+    
     path = "C:/AppData/SM-G955N/PurPle/"
     colnames, rowlists = purple_DB(path)
     
     print(colnames[1])
     for row in rowlists[1]:
         print(row)
-        
+    '''

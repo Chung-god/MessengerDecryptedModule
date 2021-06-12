@@ -6,6 +6,7 @@ from PyQt5.QtGui import *
 import subprocess
 import os
 import shutil
+from datetime import datetime
 
 from LysnWindow import LysnScreen
 from TongTongWindow import TongTongScreen
@@ -15,7 +16,6 @@ from KakaoWindow import KakaoScreen
 from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData
 from button import Button
 
-
 class appScreen(QWidget):
     def __init__(self):
         super().__init__()
@@ -23,8 +23,7 @@ class appScreen(QWidget):
 
     def setupUi(self):
         # Window Setting
-        re1 = 1
-        self.setGeometry(500, 70, 1100, 800)
+        self.setGeometry(500, 70, 1000, 700)
         self.setWindowTitle("main")
         self.setFixedSize(self.rect().size())
         self.setContentsMargins(30, 30, 30, 30)
@@ -53,10 +52,10 @@ class appScreen(QWidget):
         self.phonePhoto.setStyleSheet('background:rgb(242, 242, 242);')
 
         # 정보
-        serialNo, productNo, androidVersion = self.deviceInformation()
-        self.text2 = QLabel(f"시리얼 넘버 : {serialNo}")
-        self.text3 = QLabel(f"제품 넘버 : {productNo}")
-        self.text4 = QLabel(f"안드로이드 버전 : {androidVersion}")
+        self.serialNo, self.productNo, self.androidVersion = self.deviceInformation()
+        self.text2 = QLabel(f"시리얼 넘버 : {self.serialNo}")
+        self.text3 = QLabel(f"제품 넘버 : {self.productNo}")
+        self.text4 = QLabel(f"안드로이드 버전 : {self.androidVersion}")
 
         font.setBold(False)
         font.setPointSize(font.pointSize() - 3)
@@ -182,113 +181,191 @@ class appScreen(QWidget):
             self.text1.setText('devices/emulators를 찾을 수 없습니다.')
             self.text1.setStyleSheet('color: red;')
         return serialNo, productNo, androidVersion
-
+    
     # LysnWindow로 이동
     def showLysnWindow(self):
-        reply = self.checkData('Lysn')
-        if reply == 'Yes':
-            LysnData(self.phoneNo)  # Lysn 데이터 추출
-        elif reply == 'Already_Exits_No':
-            pass
-        elif reply == 'Back': # 동작 안함
-            return
+        self.appName = 'Lysn'
 
+        self.path,self.reply = '','Back'
+        dialog = Dialog(self)
+        dialog.exec()
+
+        if self.reply == 'Yes':
+            LysnData(self.path)  # Kakao 데이터 추출
+        elif self.reply == 'Already_Exits_No':
+            pass
+        elif self.reply == 'Back':
+            return
+        self.path = f'{self.path}/{self.appName}/'
         self.hide()  # hide main window
-        self.lysnWindow = LysnScreen(self.phoneNo)
+        self.lysnWindow = LysnScreen(self.path)
         self.lysnWindow.exec()
         self.show()
 
     # TongTongWindow로 이동
     def showTongTongWindow(self):
-        reply = self.checkData('TongTong')
-        if reply == 'Yes':
-            TongTongData(self.phoneNo)  # TongTong 데이터 추출
-        elif reply == 'Already_Exits_No':
-            pass
-        elif reply == 'Back': # 동작 안함
-            return
+        self.appName = 'TongTong'
 
+        self.path,self.reply = '','Back'
+        dialog = Dialog(self)
+        dialog.exec()
+
+        if self.reply == 'Yes':
+            TongTongData(self.path)  # Kakao 데이터 추출
+        elif self.reply == 'Already_Exits_No':
+            pass
+        elif self.reply == 'Back':
+            return
+        self.path = f'{self.path}/{self.appName}/'
         self.hide()  # hide main window
-        self.tongtongWindow = TongTongScreen(self.phoneNo)
+        self.tongtongWindow = TongTongScreen(self.path)
         self.tongtongWindow.exec()
         self.show()
 
     # TongTongWindow로 이동
     def showWickrWindow(self):
-        reply = self.checkData('Wickr')
-        if reply == 'Yes':
-            WickrData(self.phoneNo)  # Wickr 데이터 추출
-        elif reply == 'Already_Exits_No':
+        self.appName = 'Wickr'
+
+        self.path,self.reply = '','Back'
+        dialog = Dialog(self)
+        dialog.exec()
+
+        if self.reply == 'Yes':
+            WickrData(self.path)  # Kakao 데이터 추출
+        elif self.reply == 'Already_Exits_No':
             pass
-        elif reply == 'Back':
+        elif self.reply == 'Back':
             return
+        self.path = f'{self.path}/{self.appName}/'
 
         self.hide()  # hide main window
-        self.WickrWindow = WickrScreen(self.phoneNo)
+        self.WickrWindow = WickrScreen(self.path)
         self.WickrWindow.exec()
         self.show()
 
     # PurpleWindow로 이동
     def showPurpleWindow(self):
-        reply = self.checkData('Purple')
-        if reply == 'Yes':
-            WickrData(self.phoneNo)  # Wickr 데이터 추출
-        elif reply == 'Already_Exits_No':
+        self.appName = 'Purple'
+
+        self.path,self.reply = '','Back'
+        dialog = Dialog(self)
+        dialog.exec()
+
+        if self.reply == 'Yes':
+            PurpleData(self.path)  # Kakao 데이터 추출
+        elif self.reply == 'Already_Exits_No':
             pass
-        elif reply == 'Back':
+        elif self.reply == 'Back':
             return
 
+        self.path = f'{self.path}/{self.appName}/'
         self.hide()  # hide main window
-        self.PurpleWindow = PurpleScreen(self.phoneNo)
+        self.PurpleWindow = PurpleScreen(self.path)
         self.PurpleWindow.exec()
         self.show()
 
     def showKakaoWindow(self):
-        reply = self.checkData('KakaoTalk')
-        if reply == 'Yes':
-            WickrData(self.phoneNo)  # Kakao 데이터 추출
-        elif reply == 'Already_Exits_No':
+        self.appName = 'KakaoTalk'
+
+        self.path,self.reply = '','Back'
+        dialog = Dialog(self)
+        dialog.exec()
+
+        if self.reply == 'Yes':
+            KakaoTalkData(self.path) 
+        elif self.reply == 'Already_Exits_No':
             pass
-        elif reply == 'Back':
+        elif self.reply == 'Back':
             return
 
+        self.path = f'{self.path}/{self.appName}/'
         self.hide()  # hide main window
-        self.KakaoWindow = KakaoScreen(self.phoneNo)
+        self.KakaoWindow = KakaoScreen(self.path)
         self.KakaoWindow.exec()
         self.show()
 
-    def checkData(self, app):
-
-        if os.path.exists(f'C:/AppData/{self.phoneNo}/{app}'):
-            reply = QMessageBox.question(self, 'Message', f'이미 {app} 데이터가 존재합니다.\n{app} 데이터를 다시 추출하시겠습니까?',
+    def checkData(self):
+        if os.path.exists(f'{self.path}/{self.appName}'):
+            reply = QMessageBox.question(self, 'Message', f'이미 {self.appName} 데이터가 존재합니다.\n{self.appName} 데이터를 다시 추출하시겠습니까?',
                                          QMessageBox.Yes | QMessageBox.No | QMessageBox.Close , QMessageBox.Close)
-
-            if reply == QMessageBox.No:
-                return 'Already_Exists_No'
-            elif reply == QMessageBox.Close:
-                return 'Back'
+            if reply == QMessageBox.No: return 'Already_Exists_No'
+            elif reply == QMessageBox.Close: return 'Back'
             elif reply == QMessageBox.Yes:
                 try:
-                    shutil.rmtree(f'C:/AppData/{self.phoneNo}/{app}/')
+                    shutil.rmtree(f'{self.path}/{self.appName}/')
                 except:
                     print('데이터 파일이 열려있습니다. 닫고 다시 실행해주세요.')
+                    return 'Back'
                 return 'Yes'
-            return 'back'
-
-
-
         else:
-            reply = QMessageBox.question(self, 'Message', f'{app} 데이터를 추출하시겠습니까?',
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-            if reply == QMessageBox.No:
-                return 'back'
-            elif reply == QMessageBox.Yes:
-                if not os.path.exists(f'C:/AppData/{self.phoneNo}'):
-                    os.makedirs(f'C:/AppData/{self.phoneNo}')
-                
-            return 'Yes'
+            reply = QMessageBox.question(self, 'Message', f'{self.appName} 데이터를 추출하시겠습니까?', QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes: return 'Yes'
+            elif reply == QMessageBox.No: return 'Back'
 
+class Dialog(QDialog):
+    def __init__(self, parent=None):
+        super(Dialog, self).__init__()
+        self.p = parent
 
+        self.createFormGroupBox()
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+        mainLayout = QVBoxLayout()
+        mainLayout.addWidget(self.formGroupBox1)
+        mainLayout.addWidget(self.formGroupBox2)
+        mainLayout.addStretch(1)
+        mainLayout.addWidget(buttonBox)
+        self.setLayout(mainLayout)
+        
+        self.setWindowTitle("Evidence Item Imformation")
+        self.setMinimumWidth(600)
+        self.setContentsMargins(10, 5, 10, 5)
+
+    def createFormGroupBox(self):
+        self.formGroupBox1 = QGroupBox("Phone Imformation")
+        layout = QFormLayout()
+        layout.addRow(QLabel("Serial Number :"), QLabel(self.p.serialNo))
+        layout.addRow(QLabel("Product Model :"), QLabel(self.p.productNo))
+        layout.addRow(QLabel("Android Version :"), QLabel(self.p.androidVersion))
+        layout.addRow(QLabel("App :"), QLabel(self.p.appName))
+        self.formGroupBox1.setLayout(layout)
+    
+        self.formGroupBox2 = QGroupBox("Case Imformation")
+        layout = QFormLayout()
+        self.date = datetime.today().strftime("%Y%m%d")
+        self.pa = f'C:/MDTool/{self.p.phoneNo}/{self.date}-{self.p.appName}'
+        self.CN, self.UD, self.EX, self.NT, self.PT = QLineEdit(), QLineEdit(), QLineEdit(), QLineEdit(), QLabel(self.pa)
+        layout.addRow(QLabel("Date :"), QLabel(self.date))
+        layout.addRow(QLabel("Case Number :"), self.CN)
+        layout.addRow(QLabel("Unique Description :"), self.UD)
+        layout.addRow(QLabel("Examiner :"), self.EX)
+        layout.addRow(QLabel("Notes :"), self.NT)
+        layout.addRow(QLabel("Path :"), self.PT)
+        self.CN.textChanged[str].connect(self.onChanged)
+        self.formGroupBox2.setLayout(layout)
+        
+    def onChanged(self, text):
+        self.PT.setText(f'{self.pa}-{text}')
+    
+    def accept(self):
+        self.p.path = self.PT.text()
+        
+        self.p.reply = self.p.checkData()
+        if self.p.reply == 'Back':
+            return
+        elif self.p.reply == 'Yes':
+            os.makedirs(self.p.path, exist_ok=True)
+            with open(self.p.path+f'/{self.date}-Case Info-{self.CN.text()}.txt', "w+") as f:
+                f.write(f'[Phone Information]\nSerial Number : {self.p.serialNo}\nProduct Model : {self.p.productNo}\n'+
+                f'Android Version : {self.p.androidVersion}\nApp : {self.p.appName}\n\n[Case Imformation]\n'+
+                f'Date : {self.date}\nCase Number : {self.CN.text()}\nUnique Description : {self.UD.text()}\n'+
+                f'Examiner : {self.EX.text()}\nNotes : {self.NT.text()}\nPath : {self.PT.text()}\n')
+            self.close()
+        else:
+            self.close()
+    
 if __name__ == "__main__":
     import sys
     app = QApplication(sys.argv)

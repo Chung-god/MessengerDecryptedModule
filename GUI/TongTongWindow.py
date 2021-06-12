@@ -15,7 +15,7 @@ import os
 import copy
 
 class TongTongScreen(QDialog):
-    def __init__(self, phoneNo):
+    def __init__(self, path):
         super().__init__()
         # 초기화
         self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint )
@@ -23,8 +23,7 @@ class TongTongScreen(QDialog):
         self.on_off, self.f_name = 0, ''
         self.gcmColnames, self.gcmRowlists = [], []
 
-        self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/TongTong/'
+        self.path = path
         self.TongTongData() # 미리 TongTong 데이터 모두 가져오기
         self.setupUI()
         
@@ -257,7 +256,7 @@ class TongTongScreen(QDialog):
 
         media = -1
         for m in range(len(colname)):
-            if list(colname)[m] == '사진':
+            if list(colname)[m] == '미디어':
                 media = m
             if list(colname)[m] == '비디오':
                 video = m
@@ -265,7 +264,7 @@ class TongTongScreen(QDialog):
                 types = m
         # col 개수 지정
         if media != -1:
-            self.tableWidget.setColumnCount(len(colname)-1)
+            self.tableWidget.setColumnCount(len(colname)-2)
         else:
             self.tableWidget.setColumnCount(len(colname))
         self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
@@ -284,14 +283,7 @@ class TongTongScreen(QDialog):
                     mpath = rowlist[i][j]
                     vpath = rowlist[i][video]
                     tp = rowlist[i][types]
-
-                    if tp == 'audio': # 오디오
-                        mpath = 'image/audio.png'
-                        vpath = vpath.replace('TongVideo','TongAudio')
-                        self.btn1 = Button(QPixmap(mpath), 30, self.videoWindow)
-                        self.btn1.setText(vpath)
-                        self.tableWidget.setCellWidget(i,j,self.btn1)
-                    elif tp == 'image':
+                    if tp == 'image':
                         self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
                         self.btn1.setText(rowlist[i][j])
                         self.tableWidget.setCellWidget(i,j,self.btn1)
@@ -370,6 +362,6 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion'))
-    phoneNo = 'SM-G955N'
-    ui = TongTongScreen(phoneNo)
+    path = 'C:/MDTool/SM-G955N/20210611-TongTong-001/TongTong/'
+    ui = TongTongScreen(path)
     sys.exit(app.exec_())
