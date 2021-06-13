@@ -303,7 +303,6 @@ class appScreen(QWidget):
 
         self.path = f'{self.path}/{self.appName}/'
         self.hide()  # hide main window
-        print(self.path)
         self.WeChatWindow = WechatScreen(self.path)
         self.WeChatWindow.exec()
         self.show()
@@ -318,7 +317,6 @@ class appScreen(QWidget):
                 try:
                     shutil.rmtree(f'{self.path}/{self.appName}/')
                 except:
-                    print('데이터 파일이 열려있습니다. 닫고 다시 실행해주세요.')
                     return 'Back'
                 return 'Yes'
         else:
