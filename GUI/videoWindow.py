@@ -3,7 +3,7 @@ import cv2
 import os
 from ffpyplayer.player import MediaPlayer
 import imutils
-
+    
 def video(videoName):
     if os.path.isfile(videoName) == False:
         videoName = 'image/noimage.png'

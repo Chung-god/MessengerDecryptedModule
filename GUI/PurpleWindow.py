@@ -202,6 +202,8 @@ class PurpleScreen(QDialog):
                         people.remove(talkrowlist[i][1])
                     people=', '.join(people)
                     talkrowlist[i][2] = people
+                    if people == '':
+                        talkrowlist[i][2] = talkrowlist[i][1]
                     crowlist.append(talkrowlist[i])
             
             self.chatrowlists.append(crowlist)

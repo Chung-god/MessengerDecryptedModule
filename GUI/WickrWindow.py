@@ -116,12 +116,11 @@ class WickrScreen(QDialog):
 
         self.showDialog()
         
-        if self.passerror == 'yes':
-            for i in range(self.chatRoomLen):
-                self.chatRoomComboBox.addItem(self.chatRoomNum[i])
-            self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
-            self.chatRoomComboBox.setToolTip('Chat Room')
-            self.chatRoomComboBox.show()
+        for i in range(self.chatRoomLen):
+            self.chatRoomComboBox.addItem(self.chatRoomNum[i])
+        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
+        self.chatRoomComboBox.setToolTip('Chat Room')
+        self.chatRoomComboBox.show()
 
     def showDialog(self):
         text, ok = QInputDialog.getText(self, 'Password', 'Enter your password :', QLineEdit.Password, flags=(Qt.WindowTitleHint|Qt.WindowCloseButtonHint))
@@ -224,6 +223,8 @@ class WickrScreen(QDialog):
                         people.remove(talkrowlist[i][1])
                     people=', '.join(people)
                     talkrowlist[i][2] = people
+                    if people == '':
+                        talkrowlist[i][2] = talkrowlist[i][1]
                     crowlist.append(talkrowlist[i])
             
             self.chatrowlists.append(crowlist)
@@ -240,7 +241,7 @@ class WickrScreen(QDialog):
     def wickrData(self):
         try:
             self.wickrColnames, self.wickrRowlists = wickrDB(self.path, self.password.text())
-        
+
             self.chatRoomLen = len(self.wickrRowlists[2])
             self.chatRoomNum = [self.wickrRowlists[2][i][0] for i in range(self.chatRoomLen)]
             self.chatRoomPeople = [self.wickrRowlists[2][i][1].split(', ') for i in range(self.chatRoomLen)]
@@ -251,7 +252,6 @@ class WickrScreen(QDialog):
             self.f_name = "wickr_db"
             self.showTable(colname, rowlist)
             self.passerror.hide()
-            self.passerror = 'yes'
         except:
             self.passerror.setText('비밀번호가 틀렸습니다.')
             self.showDialog()
@@ -391,6 +391,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle(QStyleFactory.create('Fusion')) # --> 없으면, 헤더색 변경 안됨.
-    path = 'C:/MDTool/SM-G955N/20210612-Wickr-001/Wickr/'
+    path = 'C:/MDTool/SM-G925S/20210614-Wickr-001/Wickr/'
     ui = WickrScreen(path)
     sys.exit(app.exec_())

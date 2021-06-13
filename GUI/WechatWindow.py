@@ -5,21 +5,24 @@ from PyQt5.QtCore import *
 
 from openpyxl.styles import Font, Border, Side, Alignment
 import openpyxl
-from xml.etree.ElementTree import parse
+from videoWindow import video, image
+
+import os
+import copy
 
 from exportDB import wechat_db
 from button import Button
 
 class WechatScreen(QDialog):
-    def __init__(self, phoneNo):
+    def __init__(self, path):
         super().__init__()
         # 초기화
+        self.setWindowFlags(Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         self.tableWidget = QTableWidget()
         self.on_off, self.f_name = 0, ''
         self.enColnames, self.enRowlists = [], []
 
-        self.phoneNo = phoneNo
-        self.path = f'C:/AppData/{self.phoneNo}/WeChat/'
+        self.path = path
         self.wechatData()  # 미리 Wechat 데이터 모두 가져오기
         self.setupUI()
 
@@ -57,17 +60,10 @@ class WechatScreen(QDialog):
         self.searchBox.setMinimumSize(QtCore.QSize(0, 15))
         self.searchBox.returnPressed.connect(self.search_items)
 
-        # combo box EnMicroMsg
-        self.EnMicroMsgComboBox = QComboBox()
-        self.EnMicroMsgComboBox.addItem("videoinfo2")
-        self.EnMicroMsgComboBox.setFixedWidth(100)
-        self.EnMicroMsgComboBox.activated.connect(self.EnMicroMsgComboEvent)
-        self.EnMicroMsgComboBox.hide()
-
         # excel button
         self.excelSaveButton = QPushButton(default=False, autoDefault=False)
         self.excelSaveButton.setFixedWidth(100)
-        self.excelSaveButton.setText('xls')
+        self.excelSaveButton.setText('Save as xls')
         self.excelSaveButton.clicked.connect(self.excelButtonClicked)
 
         # open combo box
@@ -75,6 +71,21 @@ class WechatScreen(QDialog):
         self.openComboBox.addItem("EnMicroMsg.db")
         self.openComboBox.setFixedWidth(100)
         self.openComboBox.activated.connect(self.DBClicked)
+
+        # combo box EnMicroMsg
+        self.EnMicroMsgComboBox = QComboBox()
+        self.EnMicroMsgComboBox.addItem("message")
+        self.EnMicroMsgComboBox.addItem("rconversation")
+        self.EnMicroMsgComboBox.addItem("rcontact")
+        self.EnMicroMsgComboBox.setFixedWidth(100)
+        self.EnMicroMsgComboBox.activated.connect(self.EnMicroMsgComboEvent)
+
+        # combo chat room
+        self.chatRoomComboBox = QComboBox()
+        for i in range(self.chatRoomLen):
+            self.chatRoomComboBox.addItem((self.chatRoomName[i]))
+        self.chatRoomComboBox.activated.connect(self.chatRoomComboEvent)
+        self.chatRoomComboBox.setToolTip('Chat Room')
 
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.backButton)
@@ -84,6 +95,7 @@ class WechatScreen(QDialog):
         hbox1.addWidget(self.openComboBox)
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.EnMicroMsgComboBox)
+        hbox2.addWidget(self.chatRoomComboBox)
         hbox2.addStretch(1)
         hbox2.addWidget(self.excelSaveButton)
 
@@ -157,18 +169,50 @@ class WechatScreen(QDialog):
         elif self.on_off == 1 and self.findField.text() == "":
             reset(self, allitems)
             print("ff None")
+
     # table combo select
     def EnMicroMsgComboEvent(self):
-        if self.EnMicroMsgComboBox.currentText() == 'videoinfo2':
-            colname, rowlist = self.enColnames[0], self.enRowlists[0]
-        elif self.EnMicroMsgComboBox.currentText() == 'Imginfo2':
+        if self.EnMicroMsgComboBox.currentText() == 'message':
+            self.chatRoomComboBox.show()
+            colname, rowlist = self.enColnames[0], self.chatrowlists[0]
+        elif self.EnMicroMsgComboBox.currentText() == 'rconversation':
+            self.chatRoomComboBox.hide()
             colname, rowlist = self.enColnames[1], self.enRowlists[1]
+        elif self.EnMicroMsgComboBox.currentText() == 'rcontact':
+            self.chatRoomComboBox.hide()
+            colname, rowlist = self.enColnames[2], self.enRowlists[2]
+        self.showTable(colname, rowlist)
 
+    def chatroom(self):
+        self.chatrowlists = []
+        talkrowlist = self.enRowlists[0]
+
+        for k in range(self.chatRoomLen):
+            crowlist = []
+            for i in range(len(self.enRowlists[0])):
+                if talkrowlist[i][7] == self.chatRoomNum[k]:
+                    crowlist.append(talkrowlist[i])
+            self.chatrowlists.append(crowlist)
+
+    def chatRoomComboEvent(self):
+        colname = self.enColnames[0]
+        for k in range(self.chatRoomLen):
+            if self.chatRoomComboBox.currentText() == self.chatRoomName[k]:
+                rowlist = self.chatrowlists[k]
+        
         self.showTable(colname, rowlist)
 
     def wechatData(self):
         self.enColnames, self.enRowlists = wechat_db(self.path)
-        colname, rowlist = self.enColnames[0], self.enRowlists[0]
+
+        self.chatRoomLen = len(self.enRowlists[1])
+        self.chatRoomNum = [self.enRowlists[1][i][1] for i in range(self.chatRoomLen)]
+        self.chatRoomName = [self.enRowlists[1][i][0] for i in range(self.chatRoomLen)]
+        self.chatRoomPeople = [self.enRowlists[1][i][1].split(', ') for i in range(self.chatRoomLen)]
+
+        self.chatroom()
+
+        colname, rowlist = self.enColnames[0], self.chatrowlists[0]
         self.f_name = "EnMicroMsg_db"
         self.showTable(colname, rowlist)
 
@@ -182,7 +226,6 @@ class WechatScreen(QDialog):
             colname, rowlist = self.enColnames[0], self.enRowlists[0]
             self.f_name = "EnMicroMsg_db"
 
-
         self.showTable(colname, rowlist)
 
     def tableHeaderClicked(self):
@@ -194,43 +237,75 @@ class WechatScreen(QDialog):
     def showTable(self, colname, rowlist):
         self.tableWidget.clear()
 
-        self.tableWidget.setColumnCount(len(colname))  # col 개수 지정
-        self.tableWidget.setRowCount(len(rowlist))  # row 개수 지정
+        media = -1
+        for m in range(len(colname)):
+            if list(colname)[m] == '미디어':
+                media = m
+            elif list(colname)[m] == '파일타입':
+                types = m
+        
+        # col 개수 지정
+        if media != -1:
+            self.tableWidget.setColumnCount(len(colname)-1)
+        else:
+            self.tableWidget.setColumnCount(len(colname))
+        self.tableWidget.setRowCount(len(rowlist)) # row 개수 지정
 
         self.tableWidget.setHorizontalHeaderLabels(colname)  # 열 제목 지정
         self.tableHeader = self.tableWidget.horizontalHeader()
         self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
 
-        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)  # 표 너비 지정
-        #self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # 표 너비 지정
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
-
-        media = -1
-        for m in range(len(colname)):
-            if list(colname)[m] == '파일':
-                media = m
-
+ 
+        
+        
         # rowlist를 표에 지정하기
         for i in range(len(rowlist)):
             for j in range(len(rowlist[i])):
                 if j == media:
-                    item = self.getImageLabel(rowlist[i][j])
-                    self.tableWidget.setCellWidget(i, j, item)
-                else:
+                    tp = rowlist[i][types]
+                    if tp == '사진':  # 사진
+                        mpath = rowlist[i][j]
+                        if os.path.isfile(mpath) == False:
+                            mpath = 'image/noimage.png'
+                    
+                        self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
+                        self.btn1.setText(rowlist[i][j])
+                        self.tableWidget.setCellWidget(i, j, self.btn1)
+                        
+                    elif tp == '영상':  # 비디오
+                        mpath = rowlist[i][j].replace('.mp4', '.jpg')
+                        if not os.path.isfile(mpath):
+                            mpath = 'image/noimage.png'
+                    
+                        self.btn2 = Button(QPixmap(mpath), 30, self.videoWindow)
+                        self.btn2.setText(rowlist[i][j])
+                        self.tableWidget.setCellWidget(i, j, self.btn2)
+                    elif tp == "음성 메세지":
+                        if not os.path.isfile(rowlist[i][j]):
+                            mpath = 'image/noimage.png'
+                        else:
+                            mpath = 'image/audio.png'
+                        self.btn1 = Button(QPixmap(mpath), 30, self.imageWindow)
+                        self.btn1.setText(mpath)
+                        self.tableWidget.setCellWidget(i, j, self.btn1)
+
+                else:  # 텍스트
                     item = QTableWidgetItem(str(rowlist[i][j]))
                     item.setTextAlignment(Qt.AlignCenter)
                     self.tableWidget.setItem(i, j, item)
-        self.tableWidget.verticalHeader().setDefaultSectionSize(80)
+        self.tableWidget.verticalHeader().setDefaultSectionSize(130)
         self.colname = colname
         self.rowlist = rowlist
 
-    def getImageLabel(self, image):
-        imageLabel = QLabel()
-        imageLabel.setScaledContents(True)
-        pixmap = QPixmap()
-        pixmap.loadFromData(image, 'jpg')
-        imageLabel.setPixmap(pixmap)
-        return imageLabel
+    def imageWindow(self):
+        mediaPath = self.sender().text()
+        image(mediaPath)
+
+    def videoWindow(self):
+        mediaPath = self.sender().text()
+        video(mediaPath)
 
     def center(self):
         frame_info = self.frameGeometry()
@@ -280,13 +355,20 @@ class WechatScreen(QDialog):
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.border = Border(right=Side(border_style="thick"))
 
-        wb.save("Wechat_" + self.f_name + ".xlsx")
+        raw_path = self.path
+        split_path = raw_path.split("/")
+        excel_path = ""
+        for x in range(0, 4):
+            excel_path = excel_path + split_path[x] + "/"
+
+        wb.save(excel_path + self.f_name + ".xlsx")
 
 
 if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    phoneNo = 'SM-G955N' #사용자에 따라 변경해야될 부분
-    ui = WechatScreen(phoneNo)
+    
+    path = 'C:/MDTool/SM-G925S/20210614-WeChat-001/WeChat/'
+    ui = WechatScreen(path)
     sys.exit(app.exec_())

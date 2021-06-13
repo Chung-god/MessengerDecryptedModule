@@ -256,6 +256,7 @@ class KakaoScreen(QDialog):
         if self.openComboBox.currentText() == 'KakaoTalk.db':
             self.kakao2ComboBox.hide()
             self.kakaoComboBox.show()
+            self.chatRoomComboBox.show()
             self.kakaoComboBox.setCurrentIndex(0)
             colname, rowlist = self.kakaoColnames[0], self.kakaoRowlists[0]
             self.f_name = "KakaoTalk_db"
@@ -263,6 +264,7 @@ class KakaoScreen(QDialog):
         elif self.openComboBox.currentText() == 'KakaoTalk2.db':
             self.kakaoComboBox.hide()
             self.kakao2ComboBox.show()
+            self.chatRoomComboBox.hide()
             self.kakao2ComboBox.setCurrentIndex(0)
             colname, rowlist = self.kakao2Colnames[0], self.kakao2Rowlists[0]
             self.f_name = "KakaoTalk2_db"
@@ -285,7 +287,6 @@ class KakaoScreen(QDialog):
         self.tableHeader = self.tableWidget.horizontalHeader()
         self.tableHeader.sectionClicked.connect(self.tableHeaderClicked)
 
-        #self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)  # 표 너비 지정
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)  # 표 수정 못하도록
 

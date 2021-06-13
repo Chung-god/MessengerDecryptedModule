@@ -13,7 +13,9 @@ from TongTongWindow import TongTongScreen
 from WickrWindow import WickrScreen
 from PurpleWindow import PurpleScreen
 from KakaoWindow import KakaoScreen
-from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData
+from WechatWindow import WechatScreen
+
+from batch import LysnData, TongTongData, KakaoTalkData, WickrData, PurpleData, WeChatData
 from button import Button
 
 class appScreen(QWidget):
@@ -91,7 +93,7 @@ class appScreen(QWidget):
 
         # button
         self.KakaoTalkButton = Button(QPixmap("image/kakao.png"), 130, self.showKakaoWindow)
-        self.WeChatButton = Button(QPixmap("image/wechat.png"), 130, self.showPurpleWindow)
+        self.WeChatButton = Button(QPixmap("image/wechat.png"), 130, self.showWeChatWindow)
         self.LysnButton = Button(QPixmap("image/lysn.png"), 130, self.showLysnWindow)
         self.TongTongButton = Button(QPixmap("image/tong.png"), 130, self.showTongTongWindow)
         self.PurpleButton = Button(QPixmap("image/purple.png"), 130, self.showPurpleWindow)
@@ -120,7 +122,7 @@ class appScreen(QWidget):
             app.setAlignment(Qt.AlignCenter)
             app.setStyleSheet('color: rgb(55,48,46);')
             app.setFont(font)
-            
+    
         # 레이아웃2
         hbox2 = QHBoxLayout()
         hbox2.addWidget(self.KakaoTalkButton)
@@ -283,6 +285,27 @@ class appScreen(QWidget):
         self.hide()  # hide main window
         self.KakaoWindow = KakaoScreen(self.path)
         self.KakaoWindow.exec()
+        self.show()
+
+    def showWeChatWindow(self):
+        self.appName = 'WeChat'
+
+        self.path,self.reply = '','Back'
+        dialog = Dialog(self)
+        dialog.exec()
+
+        if self.reply == 'Yes':
+            WeChatData(self.path) 
+        elif self.reply == 'Already_Exits_No':
+            pass
+        elif self.reply == 'Back':
+            return
+
+        self.path = f'{self.path}/{self.appName}/'
+        self.hide()  # hide main window
+        print(self.path)
+        self.WeChatWindow = WechatScreen(self.path)
+        self.WeChatWindow.exec()
         self.show()
 
     def checkData(self):
