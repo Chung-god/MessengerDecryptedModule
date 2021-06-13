@@ -557,8 +557,8 @@ def wechat_db(path):
             UIN = sdata[1]
 
     dbfile = wechat_path(path)
-    
     db = sqlcipher.connect(dbfile)
+
     KEY = wechat_en(UIN, IMEI)
 
     db.execute('pragma key="' + KEY + '"')
@@ -664,7 +664,6 @@ def wechatConversation(row, colname, col_defs, compare, path, me):
 
     return d_row
 
-
 # Lysn, TongTong 내용 추출하기
 def export(app, cur, table, colname, compare=None, path=None):
     cur.execute('pragma table_info('+table+')')
@@ -703,69 +702,8 @@ def export(app, cur, table, colname, compare=None, path=None):
 
 if __name__ == '__main__':
     
-    '''
-    path = "C:/AppData/SM-G955N/Lysn/"
-    #android_id = '4b0629381a2249a5'
-    android_id = '4f77d977f3f1c488' 
-    colnames, rowlists = lysn_userDB(path, android_id)
-    colnames, rowlists = lysn_talkDB(path, android_id,rowlists)
-    
-    print(colnames[0])
-    #print(rowlists[0][4])
-    for row in rowlists[0]:
-        print(row)
-    
-    
-    path = "C:/MDTool/SM-G955N/20210612-TongTong-001/TongTong/"
-    path = 'C:/AppData/SM-G955N/TongTong2/'
-    colnames, rowlists = tongtong_gcmDB(path)
-    
-    print(colnames[0])
-    for row in rowlists[0]:
-        print(row)
-    
-    
-    path = "C:/AppData/SM-G955N/KakaoTalk/"
-    colnames, rowlists = KaKaoTalk_DB_1(path)
-    
-    print(colnames[0])
-    for row in rowlists[0]:
-        print(row)
-    
-    
-    path = "C:/AppData/SM-G955N/W/"
-    path = 'C:/MDTool/SM-G925S/20210613-Wickr-1/Wickr/'
-    
-    password = 'dltndk11@@'
-    password = 'k2185717'
-
-    colnames, rowlists = wickrDB(path, password)
-    
-    print(colnames[2])
-    for row in rowlists[2]:
-        print(row)
-    
-    
-    path = "C:/AppData/SM-G955N/PurPle/"
-    colnames, rowlists = purple_DB(path)
-    
-    print(colnames[1])
-    for row in rowlists[1]:
-        print(row)
-    
-    #path = "C:/AppData/SM-G955N/KakaoTalk/"
-    path = 'C:/MDTool/SM-G925S/20210613-KakaoTalk-1/KakaoTalk/'
-    
-    colnames, rowlists = KaKaoTalk_DB_2(path)
-    #colnames, rowlists = KaKaoTalk_DB_1(path, rowlists)
-    
-    print(colnames[0])
-    
-    for row in rowlists[0]:
-        print(row)
-    '''
     #path = "C:/AppData/SM-G955N/WeChat/"
-    path = "C:/MDTool/SM-G925S/20210614-WeChat-001/WeChat/"
+    path = "C:/MDTool/SM-G925S/20210614-WeChat-002/WeChat/"
     colnames, rowlists = wechat_db(path)
     
     print(colnames[0])

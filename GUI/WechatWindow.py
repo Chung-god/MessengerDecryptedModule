@@ -277,7 +277,7 @@ class WechatScreen(QDialog):
                     elif tp == '영상':  # 비디오
                         mpath = rowlist[i][j].replace('.mp4', '.jpg')
                         if not os.path.isfile(mpath):
-                            mpath = 'image/noimage.png'
+                            mpath = 'image/video.png'
                     
                         self.btn2 = Button(QPixmap(mpath), 30, self.videoWindow)
                         self.btn2.setText(rowlist[i][j])
@@ -369,6 +369,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     
-    path = 'C:/MDTool/SM-G925S/20210614-WeChat-001/WeChat/'
+    path = 'C:/MDTool/SM-G925S/20210614-WeChat-002/WeChat/'
     ui = WechatScreen(path)
     sys.exit(app.exec_())
