@@ -356,7 +356,13 @@ class TongTongScreen(QDialog):
                 cell.alignment = Alignment(horizontal='center', vertical='center')
                 cell.border = Border(right=Side(border_style="thick"))
  
-        wb.save("TongTong_" + self.f_name + ".xlsx")
+        raw_path = self.path
+        split_path = raw_path.split("/")
+        excel_path =""
+        for x in range(0, 4):
+            excel_path = excel_path + split_path[x] + "/"
+
+        wb.save(excel_path + self.f_name + ".xlsx")
 
 if __name__ == "__main__":
     import sys
